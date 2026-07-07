@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(VulkanTest LANGUAGES CXX)
+project(FeEngine LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,32 +8,34 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 
-add_executable(VulkanTest
+add_executable(FeEngine
+  src/main.cpp
 )
 
 find_package(Vulkan REQUIRED)
+find_package(PkgConfig REQUIRED)
 
 
 pkg_check_modules(GLFW REQUIRED glfw3)
 
-target_compile_definitions(VulkanTest PRIVATE
+target_compile_definitions(FeEngine PRIVATE
     VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 )
 
-target_include_directories(VulkanTest PRIVATE
+target_include_directories(FeEngine PRIVATE
     ${Vulkan_INCLUDE_DIRS}
     ${GLFW_INCLUDE_DIRS}
 )
 
-target_include_directories(VulkanTest PUBLIC
+target_include_directories(FeEngine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_precompile_headers(VulkanTest PRIVATE
+target_precompile_headers(FeEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/include/pch.hpp
 )
 
-target_link_libraries(VulkanTest
+target_link_libraries(FeEngine
     ${Vulkan_LIBRARIES}
     ${GLFW_LIBRARIES}
 )
@@ -76,4 +78,4 @@ foreach(SHADER ${SHADER_SOURCES})
 endforeach()
 
 add_custom_target(compile_shaders ALL DEPENDS ${SHADER_BINARIES})
-add_dependencies(VulkanTest compile_shaders)
+add_dependencies(FeEngine compile_shaders)
