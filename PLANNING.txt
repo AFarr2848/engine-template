@@ -1,0 +1,56 @@
+- Resources and Instances
+    - Resources are all owned by FeEngine with unique ptr
+    - Instances are owned by some resource manager and referred to by index
+    - Instances never call vulkan functions or resource stuff
+
+
+- Bindless
+    - Buffer 1 - UBO for global stuff (camera, light settings, etc)
+    - Buffer 2 - Storange buffer for models and vertices and such. Device local
+    - Buffer 3 - Instance buffer (storage also) for changing stuff. Host visible.
+    - Buffer 4 - Staging buffer (transfer src) to move things to buffer 2.
+
+- Images?
+    - Idk honestly I'll figure it out 
+
+- Compute
+    - Literally just another pass I think
+
+- GPU-Driven Rendering?
+
+- Timeline semaphores
+
+- Shader Objects
+    - Hot-swap shaders!
+    - Make a RenderState object that has all the stuff that would normally be baked into the pipeline and change it while drawing
+
+
+## Classes
+
+  - Engine
+    - Owns Window, VulkanContext, AssetManager, and World
+
+  - Window 
+    - Handles GLFW and such 
+
+  - VulkanContext
+    - Handles devices and validation
+
+  - AssetManager 
+    - Owns descriptor set, allocates memory, and uploads images
+    - Compiles shaders 
+    - Models too prolly 
+
+  - World 
+    - Contains all the information about stuff that exists
+
+  - RenderPass
+    - A base class for anything that wants to issue work to the GPU 
+
+  - Swapchain
+    -eeeyup
+
+  -Timing
+    - Semaphores and timelines and such
+
+
