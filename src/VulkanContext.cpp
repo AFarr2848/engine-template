@@ -3,6 +3,7 @@
 #include <iostream>
 #include "Config.hpp"
 #include "engine/Window.hpp"
+#include "vulkan/vulkan.hpp"
 
 void fe_VulkanContext::createInstance() {
   constexpr vk::ApplicationInfo appInfo{
@@ -32,8 +33,9 @@ void fe_VulkanContext::createInstance() {
 
   // Get the required extensions.
   auto requiredExtensions = getRequiredExtensions();
+  std::cout << "Requested Extensions:" << std::endl;
   for (auto e : requiredExtensions) {
-    std::cout << e << std::endl;
+    std::cout << "\t" << e << std::endl;
   }
 
   // Check if the required extensions are supported by the Vulkan
@@ -57,10 +59,8 @@ void fe_VulkanContext::createInstance() {
       .ppEnabledLayerNames = requiredLayers.data(),
       .enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size()),
       .ppEnabledExtensionNames = requiredExtensions.data()};
-  std::cout << "Creating instanct" << std::endl;
 
   instance = vk::raii::Instance(context, createInfo);
-  std::cout << *instance << std::endl;
 }
 
 std::vector<const char*> fe_VulkanContext::getRequiredExtensions() {
@@ -69,7 +69,6 @@ std::vector<const char*> fe_VulkanContext::getRequiredExtensions() {
 
   std::vector extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
   if (enableValidationLayers) {
-    std::cout << "DEBUG EXTENSION REQUESTED" << std::endl;
     extensions.push_back(vk::EXTDebugUtilsExtensionName);
   }
 
@@ -95,10 +94,8 @@ void fe_VulkanContext::setupDebugMessenger() {
       .pfnUserCallback = &debugCallback
 
   };
-  std::cout << "bro what" << std::endl;
   debugMessenger =
       instance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
-  std::cout << "wwaaaaahhhhh" << std::endl;
 }
 
 void fe_VulkanContext::createLogicalDevice() {
@@ -123,12 +120,14 @@ void fe_VulkanContext::createLogicalDevice() {
   }
 
   vk::StructureChain<vk::PhysicalDeviceFeatures2,
+                     vk::PhysicalDeviceVulkan12Features,
                      vk::PhysicalDeviceVulkan13Features,
                      vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
       featureChain = {
           {.features = {.fillModeNonSolid = true,
                         .samplerAnisotropy =
-                            true}},  // vk::PhysicalDeviceFeatures2
+                            true}},     // vk::PhysicalDeviceFeatures2
+          {.timelineSemaphore = true},  // 12
           {.synchronization2 = true,
            .dynamicRendering = true},  // vk::PhysicalDeviceVulkan13Features
           {.extendedDynamicState =
@@ -150,7 +149,6 @@ void fe_VulkanContext::createLogicalDevice() {
       .ppEnabledExtensionNames = requiredDeviceExtension.data()};
 
   device = vk::raii::Device(physicalDevice, deviceCreateInfo);
-  std::cout << "device createtetetetteet" << std::endl;
   graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
 }
 
@@ -183,20 +181,20 @@ void fe_VulkanContext::pickPhysicalDevice() {
               });
         });
 
-    auto features = device.template getFeatures2<
-        vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
-        vk::PhysicalDeviceVulkan13Features,
-        vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+    auto features =
+        device.template getFeatures2<vk::PhysicalDeviceFeatures2,
+                                     vk::PhysicalDeviceVulkan11Features,
+                                     vk::PhysicalDeviceVulkan12Features,
+                                     vk::PhysicalDeviceVulkan13Features>();
     bool supportsRequiredFeatures =
         features.template get<vk::PhysicalDeviceVulkan11Features>()
             .shaderDrawParameters &&
+        features.template get<vk::PhysicalDeviceVulkan12Features>()
+            .timelineSemaphore &&
         features.template get<vk::PhysicalDeviceVulkan13Features>()
             .synchronization2 &&
         features.template get<vk::PhysicalDeviceVulkan13Features>()
-            .dynamicRendering &&
-        features
-            .template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>()
-            .extendedDynamicState;
+            .dynamicRendering;
 
     return supportsVulkan1_3 && supportsGraphics &&
            supportsAllRequiredExtensions && supportsRequiredFeatures;
@@ -224,8 +222,7 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL fe_VulkanContext::debugCallback(
 
 void fe_VulkanContext::createSurface() {
   VkSurfaceKHR _surface;
-  if (glfwCreateWindowSurface(*instance, win->window, nullptr, &_surface) !=
-      0) {
+  if (glfwCreateWindowSurface(*instance, win.window, nullptr, &_surface) != 0) {
     throw std::runtime_error("failed to create window surface!");
   }
   surface = vk::raii::SurfaceKHR(instance, _surface);

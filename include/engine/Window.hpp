@@ -5,18 +5,20 @@ class fe_Engine;
 
 class fe_Window {
  public:
+  fe_Window() {};
+
   void init();
 
   GLFWwindow* window;
   bool framebufferResized = false;
 
+ private:
   void initWindow();
   void pollEvents();
   bool shouldClose() const;
   void mouseMoved(float, float);
   void resetMouse();
 
- private:
   bool firstMouse = true;
   int lastX;
   int lastY;

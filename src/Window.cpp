@@ -3,9 +3,7 @@
 #include <iostream>
 #include "Config.hpp"
 
-void fe_Window::init() {}
-
-void fe_Window::initWindow() {
+void fe_Window::init() {
   glfwInit();
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);

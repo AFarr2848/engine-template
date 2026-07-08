@@ -10,11 +10,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(FeEngine
   src/main.cpp
+  src/Engine.cpp
+  src/Window.cpp
+  src/VulkanContext.cpp
+  src/Swapchain.cpp
+  src/Timing.cpp
 )
 
 find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
-
 
 pkg_check_modules(GLFW REQUIRED glfw3)
 
@@ -32,7 +36,7 @@ target_include_directories(FeEngine PUBLIC
 )
 
 target_precompile_headers(FeEngine PRIVATE
-    ${CMAKE_SOURCE_DIR}/include/pch.hpp
+    ${CMAKE_SOURCE_DIR}/include/engine/pch.hpp
 )
 
 target_link_libraries(FeEngine

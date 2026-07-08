@@ -3,9 +3,21 @@ class fe_Window;
 
 class fe_VulkanContext {
  public:
-  void init(fe_Window& win) { this->win = &win; }
+  fe_VulkanContext(fe_Window& win) : win(win) {}
 
   void cleanup();
+
+  /**
+   * @brief Init
+   * @details Requires the window to be setup
+   */
+  void init() {
+    createInstance();
+    setupDebugMessenger();
+    createSurface();
+    pickPhysicalDevice();
+    createLogicalDevice();
+  };
 
   // TODO: move this
   uint32_t findMemoryType(uint32_t typeFilter,
@@ -49,7 +61,7 @@ class fe_VulkanContext {
                                  vk::FormatFeatureFlags features);
 
  private:
-  fe_Window* win = nullptr;
+  fe_Window& win;
 
   vk::raii::Context context;
   vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
