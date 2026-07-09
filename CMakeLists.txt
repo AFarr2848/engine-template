@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
-
 add_executable(FeEngine
   src/main.cpp
   src/Engine.cpp
@@ -15,6 +13,7 @@ add_executable(FeEngine
   src/VulkanContext.cpp
   src/Swapchain.cpp
   src/Timing.cpp
+  src/AssetManager.cpp
 )
 
 find_package(Vulkan REQUIRED)
@@ -24,6 +23,10 @@ pkg_check_modules(GLFW REQUIRED glfw3)
 
 target_compile_definitions(FeEngine PRIVATE
     VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+)
+
+target_compile_definitions(FeEngine PRIVATE
+VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
 )
 
 target_include_directories(FeEngine PRIVATE
@@ -44,41 +47,55 @@ target_link_libraries(FeEngine
     ${GLFW_LIBRARIES}
 )
 
-# ---- Shader compilation section ----
-
-# Path to slang compiler (must be installed or built)
 set(SLANGC_EXECUTABLE slangc)
 
-# Input/output locations
 set(SHADER_DIR ${CMAKE_SOURCE_DIR}/src/shaders)
 set(SHADER_OUT_DIR ${CMAKE_BINARY_DIR}/shaders)
 file(MAKE_DIRECTORY ${SHADER_OUT_DIR})
 
-# List of .slang shaders
 set(SHADER_SOURCES
+    ${SHADER_DIR}/triangle.slang
 )
 
 set(SHADER_BINARIES "")
 
 foreach(SHADER ${SHADER_SOURCES})
   get_filename_component(SHADER_NAME ${SHADER} NAME_WE)
-  set(OUTPUT_FILE ${SHADER_OUT_DIR}/${SHADER_NAME}.spv)
+
+  set(VERT_OUTPUT ${SHADER_OUT_DIR}/${SHADER_NAME}_vert.spv)
+  set(FRAG_OUTPUT ${SHADER_OUT_DIR}/${SHADER_NAME}_frag.spv)
 
   add_custom_command(
-        OUTPUT ${OUTPUT_FILE}
-        COMMAND ${SLANGC_EXECUTABLE}
-                ${SHADER}
+        OUTPUT ${VERT_OUTPUT}
+        COMMAND ${SLANGC_EXECUTABLE} ${SHADER}
+                -entry vertexMain
+                -stage vertex
                 -target spirv
                 -profile spirv_1_4
                 -emit-spirv-directly
                 -fvk-use-entrypoint-name
-                -o ${OUTPUT_FILE}
+                -o ${VERT_OUTPUT}
         DEPENDS ${SHADER}
-        COMMENT "Compiling ${SHADER_NAME}.slang → SPIR-V"
+        COMMENT "Compiling Vrt ${SHADER_NAME}.slang → ${SHADER_NAME}_vert.spv"
         VERBATIM
     )
 
-  list(APPEND SHADER_BINARIES ${OUTPUT_FILE})
+  add_custom_command(
+        OUTPUT ${FRAG_OUTPUT}
+        COMMAND ${SLANGC_EXECUTABLE} ${SHADER}
+                -entry fragmentMain
+                -stage fragment
+                -target spirv
+                -profile spirv_1_4
+                -emit-spirv-directly
+                -fvk-use-entrypoint-name
+                -o ${FRAG_OUTPUT}
+        DEPENDS ${SHADER}
+        COMMENT "Compiling Frg ${SHADER_NAME}.slang → ${SHADER_NAME}_frag.spv"
+        VERBATIM
+    )
+
+  list(APPEND SHADER_BINARIES ${VERT_OUTPUT} ${FRAG_OUTPUT})
 endforeach()
 
 add_custom_target(compile_shaders ALL DEPENDS ${SHADER_BINARIES})

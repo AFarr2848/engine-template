@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <vulkan/vulkan_hpp_macros.hpp>
 #include <vulkan/vulkan_raii.hpp>
+#include "engine/AssetManager.hpp"
 #include "engine/Swapchain.hpp"
 #include "engine/Timing.hpp"
 #include "engine/VulkanContext.hpp"
@@ -18,11 +20,17 @@ void fe_Engine::startEngine() {
   ctx = std::make_unique<fe_VulkanContext>(*win);
   swp = std::make_unique<fe_Swapchain>(*win, *ctx);
   tim = std::make_unique<fe_TimingData>(*ctx, *swp);
+  man = std::make_unique<fe_AssetManager>(*ctx);
 
   win->init();
   ctx->init();
   swp->init();
   tim->init();
+
+  man->loadShaderModule("triangle_vert", "build/shaders/triangle_vert.spv",
+                        vk::ShaderStageFlagBits::eVertex);
+  man->loadShaderModule("triangle_frag", "build/shaders/triangle_frag.spv",
+                        vk::ShaderStageFlagBits::eFragment);
 }
 
 void fe_Engine::run() {
@@ -34,8 +42,9 @@ void fe_Engine::run() {
 }
 
 void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
-  // Transition the current image to be written to
-  tim->getCurrentCmdBuffer().begin({});
+  vk::CommandBuffer cmd = tim->getCurrentCmdBuffer();
+  vk::CommandBufferBeginInfo beginInfo = {};
+  cmd.begin(beginInfo);
   transitionImageLayout(
       tim->getCurrentCmdBuffer(), swp->swapChainImages[imageIndex],
       vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal, {},
@@ -66,7 +75,64 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
 
   };
 
-  tim->getCurrentCmdBuffer().beginRendering(renderingInfo);
+  cmd.beginRendering(renderingInfo);
+
+  // 1. Viewport & Scissor (Note the "WithCount" variants)
+  vk::Viewport viewport{0.0f,
+                        0.0f,
+                        static_cast<float>(swp->swapChainExtent.width),
+                        static_cast<float>(swp->swapChainExtent.height),
+                        0.0f,
+                        1.0f};
+  cmd.setViewportWithCountEXT(viewport);
+
+  vk::Rect2D scissor{{0, 0},
+                     {static_cast<uint32_t>(swp->swapChainExtent.width),
+                      static_cast<uint32_t>(swp->swapChainExtent.height)}};
+  cmd.setScissorWithCountEXT(scissor);
+
+  // 2. Input Assembly (How vertices form shapes)
+  cmd.setPrimitiveTopologyEXT(vk::PrimitiveTopology::eTriangleList);
+  cmd.setPrimitiveRestartEnableEXT(VK_FALSE);
+
+  // 3. Rasterization State (How shapes become pixels)
+  cmd.setRasterizerDiscardEnableEXT(VK_FALSE);
+  cmd.setPolygonModeEXT(vk::PolygonMode::eFill);
+  cmd.setCullModeEXT(vk::CullModeFlagBits::eNone);
+  cmd.setFrontFaceEXT(vk::FrontFace::eClockwise);
+  cmd.setDepthBiasEnableEXT(VK_FALSE);
+
+  // 4. Depth & Stencil Testing (Turned completely off for a basic triangle)
+  cmd.setDepthTestEnableEXT(VK_FALSE);
+  cmd.setDepthWriteEnableEXT(VK_FALSE);
+  cmd.setDepthBoundsTestEnableEXT(VK_FALSE);
+  cmd.setStencilTestEnableEXT(VK_FALSE);
+
+  // 5. Multisampling (Anti-aliasing, set to 1 sample / off)
+  cmd.setRasterizationSamplesEXT(vk::SampleCountFlagBits::e1);
+  vk::SampleMask sampleMask = 0xFFFFFFFF;
+  cmd.setSampleMaskEXT(vk::SampleCountFlagBits::e1, &sampleMask);
+  cmd.setAlphaToCoverageEnableEXT(VK_FALSE);
+
+  // 6. Color Blending & Writing (Writing solid colors to your swapchain
+  // attachment)
+  vk::Bool32 colorBlendEnable = VK_FALSE;
+  cmd.setColorBlendEnableEXT(0, 1, &colorBlendEnable);
+
+  // The color write mask defines which RGBA channels we are allowed to write to
+  vk::ColorComponentFlags colorWriteMask =
+      vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+      vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+  cmd.setColorWriteMaskEXT(0, 1, &colorWriteMask);
+
+  cmd.setVertexInputEXT(0, nullptr, 0, nullptr);
+
+  cmd.bindShadersEXT(vk::ShaderStageFlagBits::eVertex,
+                     man->getShader("triangle_vert"));
+  cmd.bindShadersEXT(vk::ShaderStageFlagBits::eFragment,
+                     man->getShader("triangle_frag"));
+
+  cmd.draw(3, 1, 0, 0);
 
   tim->getCurrentCmdBuffer().endRendering();
 

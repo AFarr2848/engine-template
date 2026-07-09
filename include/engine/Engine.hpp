@@ -1,10 +1,12 @@
 #pragma once
 
 #include <memory>
+
 class fe_Window;
 class fe_VulkanContext;
 class fe_TimingData;
 class fe_Swapchain;
+class fe_AssetManager;
 
 class fe_Engine {
  public:
@@ -39,4 +41,5 @@ class fe_Engine {
   std::unique_ptr<fe_VulkanContext> ctx;
   std::unique_ptr<fe_Swapchain> swp;
   std::unique_ptr<fe_TimingData> tim;
+  std::unique_ptr<fe_AssetManager> man;
 };

@@ -5,7 +5,15 @@
 #include "engine/Window.hpp"
 #include "vulkan/vulkan.hpp"
 
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+
 void fe_VulkanContext::createInstance() {
+  // Stuff for extension function loading
+  vk::detail::DynamicLoader dl;
+  PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr =
+      dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+  VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
+
   constexpr vk::ApplicationInfo appInfo{
       .pApplicationName = "TEMPLATE",
       .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
@@ -31,12 +39,7 @@ void fe_VulkanContext::createInstance() {
     }
   }
 
-  // Get the required extensions.
   auto requiredExtensions = getRequiredExtensions();
-  std::cout << "Requested Extensions:" << std::endl;
-  for (auto e : requiredExtensions) {
-    std::cout << "\t" << e << std::endl;
-  }
 
   // Check if the required extensions are supported by the Vulkan
   // implementation.
@@ -61,6 +64,8 @@ void fe_VulkanContext::createInstance() {
       .ppEnabledExtensionNames = requiredExtensions.data()};
 
   instance = vk::raii::Instance(context, createInfo);
+
+  VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
 }
 
 std::vector<const char*> fe_VulkanContext::getRequiredExtensions() {
@@ -99,57 +104,72 @@ void fe_VulkanContext::setupDebugMessenger() {
 }
 
 void fe_VulkanContext::createLogicalDevice() {
-  std::vector<vk::QueueFamilyProperties> queueFamilyProperties =
-      physicalDevice.getQueueFamilyProperties();
+  const auto queueFamilies = physicalDevice.getQueueFamilyProperties();
+  std::optional<uint32_t> unifiedQueueIndex;
 
-  // get the first index into queueFamilyProperties which supports both graphics
-  // and present
-  for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size();
-       qfpIndex++) {
-    if ((queueFamilyProperties[qfpIndex].queueFlags &
-         vk::QueueFlagBits::eGraphics) &&
-        physicalDevice.getSurfaceSupportKHR(qfpIndex, *surface)) {
-      // found a queue family that supports both graphics and present
-      queueIndex = qfpIndex;
+  for (uint32_t i = 0; i < queueFamilies.size(); ++i) {
+    const bool supportsGraphics = static_cast<bool>(
+        queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics);
+    const bool supportsPresent =
+        physicalDevice.getSurfaceSupportKHR(i, *surface);
+
+    if (supportsGraphics && supportsPresent) {
+      unifiedQueueIndex = i;
       break;
     }
   }
-  if (queueIndex == ~0) {
+
+  if (!unifiedQueueIndex.has_value()) {
     throw std::runtime_error(
-        "Could not find a queue for graphics and present -> terminating");
+        "Fatal: Could not find a GPU queue that supports both graphics and "
+        "presentation!");
   }
 
-  vk::StructureChain<vk::PhysicalDeviceFeatures2,
-                     vk::PhysicalDeviceVulkan12Features,
-                     vk::PhysicalDeviceVulkan13Features,
-                     vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
-      featureChain = {
-          {.features = {.fillModeNonSolid = true,
-                        .samplerAnisotropy =
-                            true}},     // vk::PhysicalDeviceFeatures2
-          {.timelineSemaphore = true},  // 12
-          {.synchronization2 = true,
-           .dynamicRendering = true},  // vk::PhysicalDeviceVulkan13Features
-          {.extendedDynamicState =
-               true}  // vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
-      };
+  queueIndex = unifiedQueueIndex.value();
 
-  // create a Device
-  float queuePriority = 0.0f;
-  vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
-      .queueFamilyIndex = queueIndex,
-      .queueCount = 1,
-      .pQueuePriorities = &queuePriority};
+  // Declare driver extensiosn
+  const std::vector<const char*> enabledExtensions = {
+      VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_SHADER_OBJECT_EXTENSION_NAME};
+
+  // Feature chain from the bottom up
+  //
+  vk::PhysicalDeviceVulkan11Features vulkan11Features{
+      .pNext = nullptr,
+      .shaderDrawParameters = VK_TRUE,
+  };
+  vk::PhysicalDeviceVulkan12Features vulkan12Features{
+      .pNext = &vulkan11Features,
+      .timelineSemaphore = VK_TRUE,
+      .bufferDeviceAddress = VK_TRUE};
+
+  vk::PhysicalDeviceVulkan13Features vulkan13Features{
+      .pNext = &vulkan12Features,
+      .synchronization2 = VK_TRUE,
+      .dynamicRendering = VK_TRUE};
+
+  vk::PhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures{
+      .pNext = &vulkan13Features, .shaderObject = VK_TRUE};
+
+  // Master wrapper points to the top of feature chain
+  vk::PhysicalDeviceFeatures2 masterFeatures{.pNext = &shaderObjectFeatures};
+
+  float queuePriority = 1.0f;
+  vk::DeviceQueueCreateInfo queueCreateInfo{.queueFamilyIndex = queueIndex,
+                                            .queueCount = 1,
+                                            .pQueuePriorities = &queuePriority};
+
   vk::DeviceCreateInfo deviceCreateInfo{
-      .pNext = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
+      .pNext = &masterFeatures,
       .queueCreateInfoCount = 1,
-      .pQueueCreateInfos = &deviceQueueCreateInfo,
-      .enabledExtensionCount =
-          static_cast<uint32_t>(requiredDeviceExtension.size()),
-      .ppEnabledExtensionNames = requiredDeviceExtension.data()};
+      .pQueueCreateInfos = &queueCreateInfo,
+      .enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size()),
+      .ppEnabledExtensionNames = enabledExtensions.data(),
+      .pEnabledFeatures = nullptr};
 
-  device = vk::raii::Device(physicalDevice, deviceCreateInfo);
-  graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
+  device = physicalDevice.createDevice(deviceCreateInfo);
+  VULKAN_HPP_DEFAULT_DISPATCHER.init(*device);
+
+  graphicsQueue = device.getQueue(queueIndex, 0);
 }
 
 void fe_VulkanContext::pickPhysicalDevice() {
