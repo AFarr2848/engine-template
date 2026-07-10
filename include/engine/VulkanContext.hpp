@@ -17,6 +17,7 @@ class fe_VulkanContext {
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
+    createPipelineLayout();
   };
 
   // TODO: move this
@@ -29,6 +30,8 @@ class fe_VulkanContext {
   vk::raii::SurfaceKHR surface = nullptr;
   vk::raii::Queue graphicsQueue = nullptr;
   uint32_t queueIndex = ~0;
+
+  vk::raii::PipelineLayout pipelineLayout = nullptr;
 
   /**
    * @brief Creates the vk::raii::instance
@@ -54,6 +57,11 @@ class fe_VulkanContext {
    * @brief Creates the surface. Incredible.
    */
   void createSurface();
+
+  /**
+   * @brief guess
+   */
+  void createPipelineLayout();
 
   // TODO: idk why this is even in here
   vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates,

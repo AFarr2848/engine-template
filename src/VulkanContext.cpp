@@ -2,10 +2,32 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include "Config.hpp"
+#include "engine/Structs.hpp"
 #include "engine/Window.hpp"
 #include "vulkan/vulkan.hpp"
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+
+void fe_VulkanContext::createPipelineLayout() {
+  vk::PushConstantRange pcRange = {
+
+      .stageFlags =
+          vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+      .offset = 0,
+      .size = sizeof(PushConstants)
+
+  };
+
+  vk::PipelineLayoutCreateInfo layoutInfo = {
+
+      .setLayoutCount = 0,
+      .pSetLayouts = nullptr,
+      .pushConstantRangeCount = 1,
+      .pPushConstantRanges = &pcRange
+
+  };
+  pipelineLayout = device.createPipelineLayout(layoutInfo);
+}
 
 void fe_VulkanContext::createInstance() {
   // Stuff for extension function loading

@@ -11,7 +11,7 @@ void fe_Window::init() {
 
   window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
   glfwSetWindowUserPointer(window, this);
-  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
   glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
   glfwSetCursorPosCallback(window, GLFWMouseCallback);
 

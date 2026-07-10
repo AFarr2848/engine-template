@@ -1,11 +1,11 @@
 #pragma once
 #include <unordered_map>
-#include <vulkan/vulkan_raii.hpp>
 class fe_VulkanContext;
+class fe_TimingData;
 
-class fe_AssetManager {
+class fe_ShaderManager {
  public:
-  fe_AssetManager(fe_VulkanContext& ctx) : ctx(ctx) {}
+  fe_ShaderManager(fe_VulkanContext& ctx) : ctx(ctx) {}
 
   /**
    * @brief Loads a compiled shader and puts it in the shader registry

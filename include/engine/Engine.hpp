@@ -6,7 +6,8 @@ class fe_Window;
 class fe_VulkanContext;
 class fe_TimingData;
 class fe_Swapchain;
-class fe_AssetManager;
+class fe_BufferManager;
+class fe_ShaderManager;
 
 class fe_Engine {
  public:
@@ -26,6 +27,12 @@ class fe_Engine {
 
   void recordCommandBuffer(uint32_t imageIndex);
 
+  /**
+   * @brief Does all the BS to the command buffer that's required in absence of
+   * a pipeline
+   */
+  void configCommandBuffer();
+
   // TODO: Move me
   void transitionImageLayout(vk::raii::CommandBuffer& cmd,
                              vk::Image image,
@@ -41,5 +48,6 @@ class fe_Engine {
   std::unique_ptr<fe_VulkanContext> ctx;
   std::unique_ptr<fe_Swapchain> swp;
   std::unique_ptr<fe_TimingData> tim;
-  std::unique_ptr<fe_AssetManager> man;
+  std::unique_ptr<fe_ShaderManager> shaderMan;
+  std::unique_ptr<fe_BufferManager> bufferMan;
 };

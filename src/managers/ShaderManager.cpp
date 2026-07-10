@@ -1,12 +1,13 @@
-#include "engine/AssetManager.hpp"
+#include "engine/managers/ShaderManager.hpp"
 #include <fstream>
-#include <vulkan/vulkan_raii.hpp>
+#include "engine/Structs.hpp"
+#include "engine/Timing.hpp"
 #include "engine/VulkanContext.hpp"
 #include "vulkan/vulkan.hpp"
 
-void fe_AssetManager::loadShaderModule(const std::string& name,
-                                       const std::string& filePath,
-                                       vk::ShaderStageFlagBits stage) {
+void fe_ShaderManager::loadShaderModule(const std::string& name,
+                                        const std::string& filePath,
+                                        vk::ShaderStageFlagBits stage) {
   std::ifstream file(filePath, std::ios::ate | std::ios::binary);
   if (!file.is_open()) {
     throw std::runtime_error("Failed to open shader file: " + filePath);
@@ -17,6 +18,15 @@ void fe_AssetManager::loadShaderModule(const std::string& name,
   file.seekg(0);
   file.read(reinterpret_cast<char*>(buffer.data()), fileSize);
   file.close();
+
+  // prolly bad to have 2 of these
+  vk::PushConstantRange pcRange = {
+      .stageFlags =
+          vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+      .offset = 0,
+      .size = sizeof(PushConstants)
+
+  };
 
   shaderRegistry.emplace(
       name, ctx.device.createShaderEXT(
@@ -29,9 +39,11 @@ void fe_AssetManager::loadShaderModule(const std::string& name,
                  .pCode = buffer.data(),
                  .pName = (stage == vk::ShaderStageFlagBits::eVertex
                                ? "vertexMain"
-                               : "fragmentMain")}));
+                               : "fragmentMain"),
+                 .pushConstantRangeCount = 1,
+                 .pPushConstantRanges = &pcRange}));
 }
 
-vk::ShaderEXT fe_AssetManager::getShader(const std::string& name) {
+vk::ShaderEXT fe_ShaderManager::getShader(const std::string& name) {
   return shaderRegistry.at(name);
 }

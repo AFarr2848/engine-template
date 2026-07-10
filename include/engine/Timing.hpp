@@ -18,7 +18,7 @@ class fe_TimingData {
     createSyncObjects();
   }
 
-  int64_t currentFrame = 0;
+  int64_t currentFrame = 1;
   int32_t currentFrameInFlight = 0;
 
   // Bc the number of semaphores are based on the swapchain image count, which

@@ -1,5 +1,6 @@
 
 #include "engine/Swapchain.hpp"
+#include <iostream>
 #include "engine/VulkanContext.hpp"
 #include "engine/Window.hpp"
 void fe_Swapchain::createSwapChain() {
@@ -96,7 +97,6 @@ void fe_Swapchain::recreateSwapChain() {
     glfwGetFramebufferSize(win.window, &width, &height);
     glfwWaitEvents();
   }
-
   ctx.device.waitIdle();
 
   cleanupSwapChain();

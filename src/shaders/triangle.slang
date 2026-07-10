@@ -4,27 +4,33 @@ struct VertexOutput
     float3 color    : COLOR;
 };
 
-static const float2 kPositions[3] = 
-{
-    float2(0.0, -0.5),
-    float2(0.5, 0.5),
-    float2(-0.5, 0.5)
+struct Vertex {
+  float3 position;
+  float pad0;
+  float3 normal;
+  float pad1;
+  float2 uv;
+  float2 pad2;
+
 };
 
-static const float3 kColors[3] = 
-{
-    float3(1.0, 0.0, 0.0),
-    float3(0.0, 1.0, 0.0),
-    float3(0.0, 0.0, 1.0)
+struct PushConstants {
+    Vertex* vertexPtr;
 };
+
+[[vk::push_constant]]
+PushConstants pc;
+
 
 [shader("vertex")]
 VertexOutput vertexMain(uint vertexID : SV_VertexID)
 {
     VertexOutput output;
+
+    Vertex v = pc.vertexPtr[vertexID];
     
-    output.position = float4(kPositions[vertexID], 0.0, 1.0);
-    output.color    = kColors[vertexID];
+    output.position = float4(v.position, 1.0);
+    output.color    = v.normal;
     
     return output;
 }

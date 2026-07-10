@@ -13,7 +13,8 @@ add_executable(FeEngine
   src/VulkanContext.cpp
   src/Swapchain.cpp
   src/Timing.cpp
-  src/AssetManager.cpp
+  src/managers/BufferManager.cpp
+  src/managers/ShaderManager.cpp
 )
 
 find_package(Vulkan REQUIRED)
