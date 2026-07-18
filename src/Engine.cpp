@@ -293,7 +293,7 @@ void fe_Engine::transitionImageLayout(vk::raii::CommandBuffer& cmd,
 
 void fe_Engine::configCommandBuffer() {
   vk::CommandBuffer cmd = tim->getCurrentCmdBuffer();
-  // 1. Viewport & Scissor (Note the "WithCount" variants)
+  // 1. Viewport & Scissor
   vk::Viewport viewport{0.0f,
                         0.0f,
                         static_cast<float>(swp->swapChainExtent.width),
@@ -307,18 +307,18 @@ void fe_Engine::configCommandBuffer() {
                       static_cast<uint32_t>(swp->swapChainExtent.height)}};
   cmd.setScissorWithCountEXT(scissor);
 
-  // 2. Input Assembly (How vertices form shapes)
+  // 2. Input Assembly
   cmd.setPrimitiveTopologyEXT(vk::PrimitiveTopology::eTriangleList);
   cmd.setPrimitiveRestartEnableEXT(VK_FALSE);
 
-  // 3. Rasterization State (How shapes become pixels)
+  // 3. Rasterization State
   cmd.setRasterizerDiscardEnableEXT(VK_FALSE);
   cmd.setPolygonModeEXT(vk::PolygonMode::eFill);
-  cmd.setCullModeEXT(vk::CullModeFlagBits::eNone);
-  cmd.setFrontFaceEXT(vk::FrontFace::eClockwise);
+  cmd.setCullModeEXT(vk::CullModeFlagBits::eBack);
+  cmd.setFrontFaceEXT(vk::FrontFace::eCounterClockwise);
   cmd.setDepthBiasEnableEXT(VK_FALSE);
 
-  // 4. Depth & Stencil Testing (Turned completely off for a basic triangle)
+  // 4. Depth & Stencil Testing
   cmd.setDepthTestEnableEXT(VK_FALSE);
   cmd.setDepthWriteEnableEXT(VK_FALSE);
   cmd.setDepthBoundsTestEnableEXT(VK_FALSE);
