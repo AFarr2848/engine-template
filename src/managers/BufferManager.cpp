@@ -8,6 +8,35 @@
 #include "engine/VulkanContext.hpp"
 #include "vulkan/vulkan.hpp"
 
+void fe_BufferManager::createWorldBuffer() {
+  createBuffer(sizeof(fe_WorldData),
+               vk::BufferUsageFlagBits::eStorageBuffer |
+                   vk::BufferUsageFlagBits::eShaderDeviceAddress,
+               vk::MemoryPropertyFlagBits::eDeviceLocal |
+                   vk::MemoryPropertyFlagBits::eHostVisible |
+                   vk::MemoryPropertyFlagBits::eHostCoherent,
+               {.flags = vk::MemoryAllocateFlagBits::eDeviceAddress},
+               worldBuffer, worldBufferMemory);
+  worldBufferAddress = ctx.device.getBufferAddress({.buffer = worldBuffer});
+}
+
+void fe_BufferManager::updateWorldBuffer(fe_WorldData worldData) {
+  // Check if memcpy works properly
+  static_assert(std::is_trivially_copyable<fe_WorldData>::value,
+                "fe_WorldData is not safely copyable with memcpy!");
+
+  void* data = ctx.device.mapMemory2({
+      .memory = worldBufferMemory,
+      .offset = 0,
+      .size = sizeof(fe_WorldData),
+  });
+
+  // literally just copy it in because it's eHostVisible and eDeviceLocal
+  memcpy(data, &worldData, sizeof(fe_WorldData));
+
+  ctx.device.unmapMemory2({.memory = worldBufferMemory});
+}
+
 void fe_BufferManager::createTransformBuffer(size_t size) {
   createBuffer(size,
                vk::BufferUsageFlagBits::eStorageBuffer |

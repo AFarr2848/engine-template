@@ -16,6 +16,7 @@ add_executable(FeEngine
   src/managers/BufferManager.cpp
   src/managers/ShaderManager.cpp
   src/World.cpp
+  src/InputHelper.cpp
 )
 
 find_package(Vulkan REQUIRED)

@@ -19,13 +19,14 @@ fe_Engine::~fe_Engine() = default;
 fe_Engine::fe_Engine() = default;
 
 void fe_Engine::startEngine() {
-  win = std::make_unique<fe_Window>();
+  inputHelper = std::make_unique<fe_InputHelper>();
+  win = std::make_unique<fe_Window>(*inputHelper);
   ctx = std::make_unique<fe_VulkanContext>(*win);
   swp = std::make_unique<fe_Swapchain>(*win, *ctx);
   tim = std::make_unique<fe_TimingData>(*ctx, *swp);
   shaderMan = std::make_unique<fe_ShaderManager>(*ctx);
   bufferMan = std::make_unique<fe_BufferManager>(*ctx);
-  world = std::make_unique<fe_World>();
+  world = std::make_unique<fe_World>(*inputHelper);
 
   win->init();
   ctx->init();
@@ -48,13 +49,29 @@ void fe_Engine::startEngine() {
   bufferMan->createMeshBuffer(vertices, indices);
   bufferMan->createTransformBuffer(sizeof(glm::mat4) *
                                    world->transforms.size());
+  bufferMan->createWorldBuffer();
 }
 
 void fe_Engine::run() {
   while (!glfwWindowShouldClose(win->window)) {
     glfwPollEvents();
+    frameContext = {
+
+        .deltaTime = tim->deltaTime,
+        .totalTime = tim->currentTime,
+        .frameIndex = tim->currentFrame,
+        .screenWidth = swp->swapChainExtent.width,
+        .screenHeight = swp->swapChainExtent.height
+
+    };
+
+    inputHelper->updateInputs();
+    world->processInput(frameContext);
     world->transformShapes();
+    fe_WorldData worldData = world->getWorldData(frameContext);
+
     bufferMan->updateTransformBuffer(world->transforms);
+    bufferMan->updateWorldBuffer(worldData);
     drawFrame();
   }
   ctx->device.waitIdle();
@@ -109,6 +126,7 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
     fe_PushConstants pcData = {
         .vertBufAddress = bufferMan->meshBufferAddress,
         .transformBufAddress = bufferMan->transformBufferAddress,
+        .worldBufAddress = bufferMan->worldBufferAddress,
         .transformIndex = info.transformIndex};
     cmd.pushConstants(
         ctx->pipelineLayout,

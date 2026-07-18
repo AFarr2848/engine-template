@@ -1,4 +1,5 @@
 #include "engine/Timing.hpp"
+#include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
 #include <cstdint>
 #include <vulkan/vulkan_raii.hpp>
@@ -90,4 +91,7 @@ void fe_TimingData::incrementTiming() {
   semaphoreIndex = (semaphoreIndex + 1) % presentCompleteSemaphore.size();
   currentFrame += 1;
   currentFrameInFlight = (currentFrame) % MAX_FRAMES_IN_FLIGHT;
+  lastTime = currentTime;
+  currentTime = glfwGetTime();
+  deltaTime = currentTime - lastTime;
 }

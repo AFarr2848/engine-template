@@ -1,13 +1,15 @@
 #pragma once
 #include "engine/Camera.hpp"
+#include "engine/InputHelper.hpp"
 #include "engine/Shapes.hpp"
 #include "engine/Structs.hpp"
-#include "vulkan/vulkan.hpp"
+
 class fe_Camera;
+class fe_FrameContext;
 
 class fe_World {
  public:
-  fe_World() {}
+  fe_World(fe_InputHelper& inputHelper) : inputHelper(inputHelper) {}
 
   std::vector<glm::mat4> transforms;
 
@@ -21,8 +23,14 @@ class fe_World {
                    std::vector<uint32_t>& indices,
                    std::vector<fe_DrawInfo>& drawInfos);
 
+  fe_WorldData getWorldData(fe_FrameContext frameContext);
+
+  void processInput(fe_FrameContext frameContext);
+
  private:
   std::vector<std::pair<fe_Shape, fe_Material>> shapes;
+  fe_Camera camera;
+  fe_InputHelper& inputHelper;
 
   void createShapes();
 };

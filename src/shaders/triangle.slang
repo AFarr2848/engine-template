@@ -14,9 +14,18 @@ struct Vertex {
 
 };
 
+struct WorldData {
+  float4x4 view;
+  float4x4 model;
+  float4x4 proj;
+  float3 cameraPos;
+
+};
+
 struct PushConstants {
     Vertex* vertexPtr;
     float4x4* transformPtr;
+    WorldData* worldDataPtr;
     uint transformIndex;
 };
 
@@ -31,7 +40,7 @@ VertexOutput vertexMain(uint vertexID : SV_VertexID)
 
     Vertex v = pc.vertexPtr[vertexID];
     
-    output.position = mul(pc.transformPtr[pc.transformIndex], float4(v.position, 1.0));
+    output.position = mul(pc.worldDataPtr.proj, mul(pc.worldDataPtr.view, mul(pc.transformPtr[pc.transformIndex], float4(v.position, 1.0))));
     output.color    = v.normal;
     
     return output;

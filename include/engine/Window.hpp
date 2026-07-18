@@ -1,16 +1,17 @@
 #pragma once
 #include <GLFW/glfw3.h>
+#include <functional>
+#include "engine/Engine.hpp"
 
 class fe_Engine;
 
 class fe_Window {
  public:
-  fe_Window() {};
+  fe_Window(fe_InputHelper& inputHelper) : inputHelper(inputHelper) {};
 
   void init();
 
   GLFWwindow* window;
-  bool framebufferResized = false;
 
  private:
   void initWindow();
@@ -23,6 +24,12 @@ class fe_Window {
   int lastX;
   int lastY;
 
-  static void framebufferResizeCallback(GLFWwindow*, int, int);
+  fe_InputHelper& inputHelper;
+
   static void GLFWMouseCallback(GLFWwindow*, double, double);
+  static void GLFWKeyCallback(GLFWwindow* win,
+                              int key,
+                              int scancode,
+                              int action,
+                              int mods);
 };

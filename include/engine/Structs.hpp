@@ -11,6 +11,7 @@ struct fe_Vertex {
 struct fe_PushConstants {
   uint64_t vertBufAddress;
   uint64_t transformBufAddress;
+  uint64_t worldBufAddress;
   uint32_t transformIndex;
 };
 
@@ -30,4 +31,19 @@ struct fe_Texture {
   vk::Image image;
   vk::DeviceMemory memory;
   vk::ImageView view;
+};
+
+struct fe_WorldData {
+  glm::mat4 view;
+  glm::mat4 model;
+  glm::mat4 proj;
+  glm::vec3 cameraPos;
+};
+
+struct fe_FrameContext {
+  float deltaTime;
+  float totalTime;
+  uint64_t frameIndex;
+  uint64_t screenWidth;
+  uint64_t screenHeight;
 };

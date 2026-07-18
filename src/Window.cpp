@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include "Config.hpp"
+#include "engine/InputHelper.hpp"
 
 void fe_Window::init() {
   glfwInit();
@@ -10,10 +11,10 @@ void fe_Window::init() {
   glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
   window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
-  glfwSetWindowUserPointer(window, this);
-  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-  glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+  glfwSetWindowUserPointer(window, &inputHelper);
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetCursorPosCallback(window, GLFWMouseCallback);
+  glfwSetKeyCallback(window, GLFWKeyCallback);
 
   if (!glfwVulkanSupported()) {
     std::cerr << "Vulkan not supported!\n";
@@ -24,43 +25,25 @@ void fe_Window::resetMouse() {
   firstMouse = true;
 }
 
-void fe_Window::framebufferResizeCallback(GLFWwindow* window,
-                                          int width,
-                                          int height) {
-  fe_Window* thisWindow =
-      reinterpret_cast<fe_Window*>(glfwGetWindowUserPointer(window));
-  thisWindow->framebufferResized = true;
+void fe_Window::GLFWKeyCallback(GLFWwindow* win,
+                                int key,
+                                int scancode,
+                                int action,
+                                int mods) {
+  fe_InputHelper* inputHelper =
+      static_cast<fe_InputHelper*>(glfwGetWindowUserPointer(win));
+
+  if (action == GLFW_PRESS)
+    inputHelper->setKeyState(key, true);
+  if (action == GLFW_RELEASE)
+    inputHelper->setKeyState(key, false);
 }
 
 void fe_Window::GLFWMouseCallback(GLFWwindow* window,
                                   double xposIn,
                                   double yposIn) {
-  fe_Window* thisWindow =
-      reinterpret_cast<fe_Window*>(glfwGetWindowUserPointer(window));
-  float xpos = static_cast<float>(xposIn);
-  float ypos = static_cast<float>(yposIn);
+  fe_InputHelper* inputHelper =
+      static_cast<fe_InputHelper*>(glfwGetWindowUserPointer(window));
 
-  if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) {
-    thisWindow->lastX = xpos;
-    thisWindow->lastY = ypos;
-    thisWindow->firstMouse = true;
-    return;
-  }
-
-  // Makes sure last positions are filled in if it's the first time moving the
-  // mouse
-  if (thisWindow->firstMouse) {
-    thisWindow->lastX = xpos;
-    thisWindow->lastY = ypos;
-    thisWindow->firstMouse = false;
-  }
-
-  float xoffset = xpos - thisWindow->lastX;
-  float yoffset = ypos - thisWindow->lastY;
-
-  thisWindow->lastX = xpos;
-  thisWindow->lastY = ypos;
-
-  // TODO:: fix this jawn
-  // thisWindow->engine->mouseMoved(xoffset, yoffset);
+  inputHelper->mouseMoved(window, glm::vec2(xposIn, yposIn));
 }

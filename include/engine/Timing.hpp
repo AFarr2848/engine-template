@@ -18,8 +18,11 @@ class fe_TimingData {
     createSyncObjects();
   }
 
-  int64_t currentFrame = 1;
-  int32_t currentFrameInFlight = 0;
+  uint64_t currentFrame = 1;
+  uint32_t currentFrameInFlight = 0;
+  float currentTime;
+  float lastTime = -1;
+  float deltaTime;
 
   // Bc the number of semaphores are based on the swapchain image count, which
   // isn't necessarily MAX_FRAMES_IN_FLIGHT

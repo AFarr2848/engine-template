@@ -10,6 +10,7 @@ class fe_Swapchain;
 class fe_BufferManager;
 class fe_ShaderManager;
 class fe_World;
+class fe_InputHelper;
 
 class fe_Engine {
  public:
@@ -22,6 +23,8 @@ class fe_Engine {
 
  private:
   std::vector<fe_DrawInfo> drawInfos = {};
+
+  fe_FrameContext frameContext;
 
   /**
    * @brief Handles timing, increments frame stuff, inits and submits the
@@ -55,4 +58,5 @@ class fe_Engine {
   std::unique_ptr<fe_ShaderManager> shaderMan;
   std::unique_ptr<fe_BufferManager> bufferMan;
   std::unique_ptr<fe_World> world;
+  std::unique_ptr<fe_InputHelper> inputHelper;
 };
