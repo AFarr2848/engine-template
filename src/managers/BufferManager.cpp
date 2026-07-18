@@ -1,11 +1,44 @@
 #include "engine/managers/BufferManager.hpp"
+#include <cstdint>
+#include <glm/ext/matrix_float4x4.hpp>
+#include <iostream>
 #include <vulkan/vulkan.hpp>
 #include "engine/Structs.hpp"
 #include "engine/Timing.hpp"
 #include "engine/VulkanContext.hpp"
 #include "vulkan/vulkan.hpp"
 
-void fe_BufferManager::createMeshBuffer(std::vector<Vertex> vertices,
+void fe_BufferManager::createTransformBuffer(size_t size) {
+  createBuffer(size,
+               vk::BufferUsageFlagBits::eStorageBuffer |
+                   vk::BufferUsageFlagBits::eShaderDeviceAddress,
+               vk::MemoryPropertyFlagBits::eDeviceLocal |
+                   vk::MemoryPropertyFlagBits::eHostVisible |
+                   vk::MemoryPropertyFlagBits::eHostCoherent,
+               {.flags = vk::MemoryAllocateFlagBits::eDeviceAddress},
+               transformBuffer, transformBufferMemory);
+  transformBufferAddress =
+      ctx.device.getBufferAddress({.buffer = transformBuffer});
+  transformSize = size;
+}
+
+void fe_BufferManager::updateTransformBuffer(
+    std::vector<glm::mat4>& transforms) {
+  assert(sizeof(glm::mat4) * transforms.size() == transformSize);
+
+  void* data = ctx.device.mapMemory2({
+      .memory = transformBufferMemory,
+      .offset = 0,
+      .size = transformSize,
+  });
+
+  // literally just copy it in because it's eHostVisible and eDeviceLocal
+  memcpy(data, transforms.data(), transformSize);
+
+  ctx.device.unmapMemory2({.memory = transformBufferMemory});
+}
+
+void fe_BufferManager::createMeshBuffer(std::vector<fe_Vertex> vertices,
                                         std::vector<uint32_t> indices) {
   // find sizes of buffers
   verticesSize = sizeof(vertices[0]) * vertices.size();

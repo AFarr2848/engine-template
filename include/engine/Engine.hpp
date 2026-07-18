@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include "engine/Structs.hpp"
 
 class fe_Window;
 class fe_VulkanContext;
@@ -8,6 +9,7 @@ class fe_TimingData;
 class fe_Swapchain;
 class fe_BufferManager;
 class fe_ShaderManager;
+class fe_World;
 
 class fe_Engine {
  public:
@@ -19,6 +21,8 @@ class fe_Engine {
   void run();
 
  private:
+  std::vector<fe_DrawInfo> drawInfos = {};
+
   /**
    * @brief Handles timing, increments frame stuff, inits and submits the
    * command buffer, and calls buffer updates and command records
@@ -50,4 +54,5 @@ class fe_Engine {
   std::unique_ptr<fe_TimingData> tim;
   std::unique_ptr<fe_ShaderManager> shaderMan;
   std::unique_ptr<fe_BufferManager> bufferMan;
+  std::unique_ptr<fe_World> world;
 };

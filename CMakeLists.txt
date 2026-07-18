@@ -15,10 +15,12 @@ add_executable(FeEngine
   src/Timing.cpp
   src/managers/BufferManager.cpp
   src/managers/ShaderManager.cpp
+  src/World.cpp
 )
 
 find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
+find_package(assimp REQUIRED)
 
 pkg_check_modules(GLFW REQUIRED glfw3)
 
@@ -46,6 +48,7 @@ target_precompile_headers(FeEngine PRIVATE
 target_link_libraries(FeEngine
     ${Vulkan_LIBRARIES}
     ${GLFW_LIBRARIES}
+    assimp
 )
 
 set(SLANGC_EXECUTABLE slangc)

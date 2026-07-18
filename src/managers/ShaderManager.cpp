@@ -24,7 +24,7 @@ void fe_ShaderManager::loadShaderModule(const std::string& name,
       .stageFlags =
           vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
       .offset = 0,
-      .size = sizeof(PushConstants)
+      .size = sizeof(fe_PushConstants)
 
   };
 

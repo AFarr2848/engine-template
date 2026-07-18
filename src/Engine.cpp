@@ -10,6 +10,7 @@
 #include "engine/Timing.hpp"
 #include "engine/VulkanContext.hpp"
 #include "engine/Window.hpp"
+#include "engine/World.hpp"
 #include "engine/managers/BufferManager.hpp"
 #include "engine/managers/ShaderManager.hpp"
 #include "vulkan/vulkan.hpp"
@@ -24,11 +25,13 @@ void fe_Engine::startEngine() {
   tim = std::make_unique<fe_TimingData>(*ctx, *swp);
   shaderMan = std::make_unique<fe_ShaderManager>(*ctx);
   bufferMan = std::make_unique<fe_BufferManager>(*ctx);
+  world = std::make_unique<fe_World>();
 
   win->init();
   ctx->init();
   swp->init();
   tim->init();
+  world->init();
 
   shaderMan->loadShaderModule("triangle_vert",
                               "build/shaders/triangle_vert.spv",
@@ -37,65 +40,21 @@ void fe_Engine::startEngine() {
                               "build/shaders/triangle_frag.spv",
                               vk::ShaderStageFlagBits::eFragment);
 
-  std::vector<Vertex> vertices = {
-      // Front face (Z+)
-      {{-0.5f, -0.5f, 0.5f}, {0, 0, 1}, {0, 0}},
-      {{0.5f, -0.5f, 0.5f}, {0, 0, 1}, {1, 0}},
-      {{0.5f, 0.5f, 0.5f}, {0, 0, 1}, {1, 1}},
-      {{-0.5f, 0.5f, 0.5f}, {0, 0, 1}, {0, 1}},
+  std::vector<fe_Vertex> vertices = {};
+  std::vector<uint32_t> indices = {};
 
-      // Back face (Z-)
-      {{0.5f, -0.5f, -0.5f}, {0, 0, -1}, {0, 0}},
-      {{-0.5f, -0.5f, -0.5f}, {0, 0, -1}, {1, 0}},
-      {{-0.5f, 0.5f, -0.5f}, {0, 0, -1}, {1, 1}},
-      {{0.5f, 0.5f, -0.5f}, {0, 0, -1}, {0, 1}},
-
-      // Left face (X-)
-      {{-0.5f, -0.5f, -0.5f}, {-1, 0, 0}, {0, 0}},
-      {{-0.5f, -0.5f, 0.5f}, {-1, 0, 0}, {1, 0}},
-      {{-0.5f, 0.5f, 0.5f}, {-1, 0, 0}, {1, 1}},
-      {{-0.5f, 0.5f, -0.5f}, {-1, 0, 0}, {0, 1}},
-
-      // Right face (X+)
-      {{0.5f, -0.5f, 0.5f}, {1, 0, 0}, {0, 0}},
-      {{0.5f, -0.5f, -0.5f}, {1, 0, 0}, {1, 0}},
-      {{0.5f, 0.5f, -0.5f}, {1, 0, 0}, {1, 1}},
-      {{0.5f, 0.5f, 0.5f}, {1, 0, 0}, {0, 1}},
-
-      // Top face (Y+)
-      {{-0.5f, 0.5f, 0.5f}, {0, 1, 0}, {0, 0}},
-      {{0.5f, 0.5f, 0.5f}, {0, 1, 0}, {1, 0}},
-      {{0.5f, 0.5f, -0.5f}, {0, 1, 0}, {1, 1}},
-      {{-0.5f, 0.5f, -0.5f}, {0, 1, 0}, {0, 1}},
-
-      // Bottom face (Y-)
-      {{-0.5f, -0.5f, -0.5f}, {0, -1, 0}, {0, 0}},
-      {{0.5f, -0.5f, -0.5f}, {0, -1, 0}, {1, 0}},
-      {{0.5f, -0.5f, 0.5f}, {0, -1, 0}, {1, 1}},
-      {{-0.5f, -0.5f, 0.5f}, {0, -1, 0}, {0, 1}},
-  };
-
-  std::vector<uint32_t> indices = {// Front
-                                   0, 1, 2, 0, 2, 3,
-                                   // Back
-                                   4, 5, 6, 4, 6, 7,
-                                   // Left
-                                   8, 9, 10, 8, 10, 11,
-                                   // Right
-                                   12, 13, 14, 12, 14, 15,
-                                   // Top
-                                   16, 17, 18, 16, 18, 19,
-                                   // Bottom
-                                   20, 21, 22, 20, 22, 23
-
-  };
+  world->prepareDraw(vertices, indices, drawInfos);
 
   bufferMan->createMeshBuffer(vertices, indices);
+  bufferMan->createTransformBuffer(sizeof(glm::mat4) *
+                                   world->transforms.size());
 }
 
 void fe_Engine::run() {
   while (!glfwWindowShouldClose(win->window)) {
     glfwPollEvents();
+    world->transformShapes();
+    bufferMan->updateTransformBuffer(world->transforms);
     drawFrame();
   }
   ctx->device.waitIdle();
@@ -136,27 +95,31 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
   };
 
   cmd.beginRendering(renderingInfo);
+  for (auto& info : drawInfos) {
+    // bind shaders
+    cmd.bindShadersEXT(vk::ShaderStageFlagBits::eVertex,
+                       shaderMan->getShader(info.material.shader + "_vert"));
+    cmd.bindShadersEXT(vk::ShaderStageFlagBits::eFragment,
+                       shaderMan->getShader(info.material.shader + "_frag"));
 
-  // bind shaders
-  cmd.bindShadersEXT(vk::ShaderStageFlagBits::eVertex,
-                     shaderMan->getShader("triangle_vert"));
-  cmd.bindShadersEXT(vk::ShaderStageFlagBits::eFragment,
-                     shaderMan->getShader("triangle_frag"));
+    // misc. config
+    configCommandBuffer();
 
-  // misc. config
-  configCommandBuffer();
+    // push constants
+    fe_PushConstants pcData = {
+        .vertBufAddress = bufferMan->meshBufferAddress,
+        .transformBufAddress = bufferMan->transformBufferAddress,
+        .transformIndex = info.transformIndex};
+    cmd.pushConstants(
+        ctx->pipelineLayout,
+        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+        0, sizeof(fe_PushConstants), &pcData);
 
-  // push constants
-  PushConstants pcData = {.vertBufAddress = bufferMan->meshBufferAddress};
-  cmd.pushConstants(
-      ctx->pipelineLayout,
-      vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0,
-      sizeof(PushConstants), &pcData);
+    cmd.bindIndexBuffer(bufferMan->meshBuffer, bufferMan->verticesSize,
+                        vk::IndexType::eUint32);
 
-  cmd.bindIndexBuffer(bufferMan->meshBuffer, bufferMan->verticesSize,
-                      vk::IndexType::eUint32);
-
-  cmd.drawIndexed(35, 1, 0, 0, 0);
+    cmd.drawIndexed(info.indexCount, 1, info.indexOffset, 0, 0);
+  }
 
   tim->getCurrentCmdBuffer().endRendering();
 

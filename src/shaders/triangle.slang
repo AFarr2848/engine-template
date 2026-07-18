@@ -16,6 +16,8 @@ struct Vertex {
 
 struct PushConstants {
     Vertex* vertexPtr;
+    float4x4* transformPtr;
+    uint transformIndex;
 };
 
 [[vk::push_constant]]
@@ -29,7 +31,7 @@ VertexOutput vertexMain(uint vertexID : SV_VertexID)
 
     Vertex v = pc.vertexPtr[vertexID];
     
-    output.position = float4(v.position, 1.0);
+    output.position = mul(pc.transformPtr[pc.transformIndex], float4(v.position, 1.0));
     output.color    = v.normal;
     
     return output;
@@ -38,5 +40,6 @@ VertexOutput vertexMain(uint vertexID : SV_VertexID)
 [shader("fragment")]
 float4 fragmentMain(VertexOutput input) : SV_Target
 {
-    return float4(input.color, 1.0);
+    float3 mappedColor = input.color * 0.5 + 0.5;
+    return float4(mappedColor, 1.0);
 }

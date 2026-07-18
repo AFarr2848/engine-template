@@ -14,7 +14,7 @@ void fe_VulkanContext::createPipelineLayout() {
       .stageFlags =
           vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
       .offset = 0,
-      .size = sizeof(PushConstants)
+      .size = sizeof(fe_PushConstants)
 
   };
 

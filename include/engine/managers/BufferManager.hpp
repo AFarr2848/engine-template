@@ -1,19 +1,27 @@
 #pragma once
 
 #include <cstdint>
+#include <glm/ext/matrix_float4x4.hpp>
 class fe_TimingData;
 class fe_VulkanContext;
-class Vertex;
+class fe_Vertex;
 
 class fe_BufferManager {
  public:
   fe_BufferManager(fe_VulkanContext& ctx) : ctx(ctx) {}
 
-  void createMeshBuffer(std::vector<Vertex> vertices,
+  void createMeshBuffer(std::vector<fe_Vertex> vertices,
                         std::vector<uint32_t> indices);
+
+  void createTransformBuffer(size_t size);
+  void updateTransformBuffer(std::vector<glm::mat4>& transforms);
 
   uint64_t meshBufferAddress;
   vk::raii::Buffer meshBuffer = nullptr;
+
+  uint64_t transformBufferAddress;
+  vk::raii::Buffer transformBuffer = nullptr;
+
   vk::DeviceSize verticesSize;
   vk::DeviceSize indicesSize;
 
@@ -32,4 +40,6 @@ class fe_BufferManager {
                   vk::DeviceSize size);
 
   vk::raii::DeviceMemory meshBufferMemory = nullptr;
+  vk::raii::DeviceMemory transformBufferMemory = nullptr;
+  size_t transformSize;
 };
