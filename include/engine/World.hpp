@@ -15,7 +15,7 @@ class fe_World {
 
   void init() { createShapes(); }
 
-  uint32_t addShape(fe_Shape shape, fe_Material material);
+  uint32_t addShape(fe_Shape shape, glm::mat4 transform, fe_Material material);
 
   void transformShapes();
 

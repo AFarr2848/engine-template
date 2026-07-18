@@ -3,6 +3,7 @@
 #include <iostream>
 #include "engine/VulkanContext.hpp"
 #include "engine/Window.hpp"
+#include "vulkan/vulkan.hpp"
 void fe_Swapchain::createSwapChain() {
   auto surfaceCapabilities =
       ctx.physicalDevice.getSurfaceCapabilitiesKHR(*ctx.surface);
@@ -90,6 +91,48 @@ vk::PresentModeKHR fe_Swapchain::chooseSwapPresentMode(
              : vk::PresentModeKHR::eFifo;
 }
 
+void fe_Swapchain::createDepthImage() {
+  vk::Format depthFormat = vk::Format::eD32Sfloat;
+
+  vk::ImageCreateInfo imageInfo{
+      .imageType = vk::ImageType::e2D,
+      .format = depthFormat,
+      .extent = vk::Extent3D{swapChainExtent.width, swapChainExtent.height, 1},
+      .mipLevels = 1,
+      .arrayLayers = 1,
+      .samples = vk::SampleCountFlagBits::e1,
+      .tiling = vk::ImageTiling::eOptimal,
+      .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+      .sharingMode = vk::SharingMode::eExclusive,
+      .initialLayout = vk::ImageLayout::eUndefined};
+
+  depthImage = ctx.device.createImage(imageInfo);
+
+  vk::MemoryRequirements memRequirements = depthImage.getMemoryRequirements();
+
+  vk::MemoryAllocateInfo allocInfo{
+      .allocationSize = memRequirements.size,
+      .memoryTypeIndex =
+          ctx.findMemoryType(memRequirements.memoryTypeBits,
+                             vk::MemoryPropertyFlagBits::eDeviceLocal)};
+
+  depthImageMemory = vk::raii::DeviceMemory(ctx.device, allocInfo);
+  depthImage.bindMemory(depthImageMemory, 0);
+
+  vk::ImageViewCreateInfo viewInfo{
+      .image = depthImage,
+      .viewType = vk::ImageViewType::e2D,
+      .format = depthFormat,
+      .subresourceRange = vk::ImageSubresourceRange{
+          .aspectMask = vk::ImageAspectFlagBits::eDepth,
+          .baseMipLevel = 0,
+          .levelCount = 1,
+          .baseArrayLayer = 0,
+          .layerCount = 1}};
+
+  depthImageView = ctx.device.createImageView(viewInfo);
+}
+
 void fe_Swapchain::recreateSwapChain() {
   int width = 0, height = 0;
   glfwGetFramebufferSize(win.window, &width, &height);
@@ -102,9 +145,12 @@ void fe_Swapchain::recreateSwapChain() {
   cleanupSwapChain();
   createSwapChain();
   createImageViews();
+  createDepthImage();
 }
 
 void fe_Swapchain::cleanupSwapChain() {
   swapChainImageViews.clear();
   swapChain = nullptr;
+  depthImage = nullptr;
+  depthImageView = nullptr;
 }

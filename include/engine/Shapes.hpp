@@ -11,6 +11,14 @@
 #include <vector>
 #include "engine/Structs.hpp"
 
+static glm::vec3 midpoint(glm::vec3 vec1, glm::vec3 vec2) {
+  glm::vec3 out = glm::vec3(0.0f);
+  out.x = (vec1.x + vec2.x) / 2;
+  out.y = (vec1.y + vec2.y) / 2;
+  out.z = (vec1.z + vec2.z) / 2;
+  return out;
+}
+
 class fe_Shape {
  public:
   std::vector<fe_Vertex> vertices = std::vector<fe_Vertex>();

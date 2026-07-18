@@ -18,6 +18,7 @@ class fe_Swapchain {
   void init() {
     createSwapChain();
     createImageViews();
+    createDepthImage();
   }
 
   void recreate();
@@ -28,8 +29,13 @@ class fe_Swapchain {
   std::vector<vk::Image> swapChainImages;
   std::vector<vk::raii::ImageView> swapChainImageViews;
   vk::Extent2D swapChainExtent;
+
   vk::raii::SwapchainKHR swapChain = nullptr;
   vk::SurfaceFormatKHR swapChainSurfaceFormat;
+
+  vk::raii::Image depthImage = nullptr;
+  vk::raii::ImageView depthImageView = nullptr;
+  vk::raii::DeviceMemory depthImageMemory = nullptr;
 
   vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
       const std::vector<vk::SurfaceFormatKHR>& availableFormats);
@@ -52,4 +58,6 @@ class fe_Swapchain {
 
   void createSwapChain();
   void createImageViews();
+
+  void createDepthImage();
 };

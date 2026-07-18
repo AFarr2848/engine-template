@@ -89,6 +89,14 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
       vk::PipelineStageFlagBits2::eColorAttachmentOutput,
       vk::ImageAspectFlagBits::eColor);
 
+  transitionImageLayout(tim->getCurrentCmdBuffer(), swp->depthImage,
+                        vk::ImageLayout::eUndefined,
+                        vk::ImageLayout::eDepthAttachmentOptimal, {},
+                        vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+                        vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+                        vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+                        vk::ImageAspectFlagBits::eDepth);
+
   vk::ClearValue clearColor{};
   clearColor.color =
       vk::ClearColorValue{std::array<float, 4>{0.1f, 0.1f, 0.15f, 1.0f}};
@@ -101,13 +109,21 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
       .storeOp = vk::AttachmentStoreOp::eStore,
       .clearValue = clearColor};
 
+  vk::RenderingAttachmentInfo depthAttachmentInfo{
+      .imageView = swp->depthImageView,
+      .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+      .resolveMode = vk::ResolveModeFlagBits::eNone,
+      .loadOp = vk::AttachmentLoadOp::eClear,
+      .storeOp = vk::AttachmentStoreOp::eDontCare,
+      .clearValue = vk::ClearValue({0.0f, 0})};
+
   // 4. Set up the overall rendering region and parameters
   vk::RenderingInfo renderingInfo = {
       .renderArea = {.offset = {0, 0}, .extent = swp->swapChainExtent},
       .layerCount = 1,
       .colorAttachmentCount = 1,
       .pColorAttachments = &colorAttachmentInfo,
-      //.pDepthAttachment = &depthAttachmentInfo
+      .pDepthAttachment = &depthAttachmentInfo
 
   };
 
@@ -319,10 +335,12 @@ void fe_Engine::configCommandBuffer() {
   cmd.setDepthBiasEnableEXT(VK_FALSE);
 
   // 4. Depth & Stencil Testing
-  cmd.setDepthTestEnableEXT(VK_FALSE);
-  cmd.setDepthWriteEnableEXT(VK_FALSE);
+  cmd.setDepthTestEnableEXT(VK_TRUE);
+  cmd.setDepthWriteEnableEXT(VK_TRUE);
   cmd.setDepthBoundsTestEnableEXT(VK_FALSE);
   cmd.setStencilTestEnableEXT(VK_FALSE);
+  // reverse Z depth
+  cmd.setDepthCompareOpEXT(vk::CompareOp::eGreaterOrEqual);
 
   // 5. Multisampling (Anti-aliasing, set to 1 sample / off)
   cmd.setRasterizationSamplesEXT(vk::SampleCountFlagBits::e1);

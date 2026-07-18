@@ -11,9 +11,11 @@
 #include "engine/InputHelper.hpp"
 #include "engine/Shapes.hpp"
 #include "engine/Structs.hpp"
-uint32_t fe_World::addShape(fe_Shape shape, fe_Material material) {
+uint32_t fe_World::addShape(fe_Shape shape,
+                            glm::mat4 transform,
+                            fe_Material material) {
   shapes.push_back({{shape}, {material}});
-  transforms.push_back(glm::mat4(1.0f));
+  transforms.push_back(transform);
   return shapes.size() - 1;
 }
 
@@ -60,10 +62,10 @@ fe_WorldData fe_World::getWorldData(fe_FrameContext frameContext) {
       .view = camera.GetViewMatrix(),
       .model = glm::mat4(1.0f),
       .proj =
-          glm::perspective(glm::radians(45.0f),
-                           static_cast<float>(frameContext.screenWidth) /
-                               static_cast<float>(frameContext.screenHeight),
-                           0.1f, 100.0f),
+          glm::perspectiveZO(glm::radians(45.0f),
+                             static_cast<float>(frameContext.screenWidth) /
+                                 static_cast<float>(frameContext.screenHeight),
+                             1000.0f, 0.1f),
       .cameraPos = camera.Position
 
   };
@@ -73,5 +75,11 @@ fe_WorldData fe_World::getWorldData(fe_FrameContext frameContext) {
 }
 
 void fe_World::createShapes() {
-  addShape({fe_Cube()}, {.shader = "triangle", .texture = ""});
+  glm::mat4 id = glm::mat4(1.0f);
+  addShape({fe_Cube()}, id, {.shader = "triangle", .texture = ""});
+  addShape({fe_Cube()}, glm::translate(id, glm::vec3(2.0f, 2.0f, 2.0f)),
+           {.shader = "triangle", .texture = ""});
+  addShape(fe_Icosahedron(), glm::translate(id, glm::vec3(-2.0f, -2.0f, -2.0f)),
+
+           {.shader = "triangle", .texture = ""});
 }

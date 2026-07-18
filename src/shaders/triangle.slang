@@ -39,7 +39,7 @@ VertexOutput vertexMain(uint vertexID : SV_VertexID)
     VertexOutput output;
 
     Vertex v = pc.vertexPtr[vertexID];
-    
+
     output.position = mul(pc.worldDataPtr.proj, mul(pc.worldDataPtr.view, mul(pc.transformPtr[pc.transformIndex], float4(v.position, 1.0))));
     output.color    = v.normal;
     
