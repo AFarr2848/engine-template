@@ -80,6 +80,8 @@ uint32_t fe_Swapchain::chooseSwapMinImageCount(
 
 vk::PresentModeKHR fe_Swapchain::chooseSwapPresentMode(
     const std::vector<vk::PresentModeKHR>& availablePresentModes) {
+  // TODO: Remove this lol
+  return vk::PresentModeKHR::eImmediate;
   assert(std::ranges::any_of(availablePresentModes, [](auto presentMode) {
     return presentMode == vk::PresentModeKHR::eFifo;
   }));

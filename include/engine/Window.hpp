@@ -1,6 +1,5 @@
 #pragma once
 #include <GLFW/glfw3.h>
-#include <functional>
 #include "engine/Engine.hpp"
 
 class fe_Engine;
@@ -20,9 +19,7 @@ class fe_Window {
   void mouseMoved(float, float);
   void resetMouse();
 
-  bool firstMouse = true;
-  int lastX;
-  int lastY;
+  static void toggleFullscreen(GLFWwindow* window);
 
   fe_InputHelper& inputHelper;
 

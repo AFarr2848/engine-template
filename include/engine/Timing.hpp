@@ -22,7 +22,9 @@ class fe_TimingData {
   uint32_t currentFrameInFlight = 0;
   float currentTime;
   float lastTime = -1;
-  float deltaTime;
+  float deltaTime = 0;
+  float timeSinceFPS = 0;
+  int fpsCount = 0;
 
   // Bc the number of semaphores are based on the swapchain image count, which
   // isn't necessarily MAX_FRAMES_IN_FLIGHT
