@@ -27,6 +27,7 @@ struct PushConstants {
     float4x4* transformPtr;
     WorldData* worldDataPtr;
     uint transformIndex;
+    uint vertexOffset;
 };
 
 [[vk::push_constant]]
@@ -38,7 +39,7 @@ VertexOutput vertexMain(uint vertexID : SV_VertexID)
 {
     VertexOutput output;
 
-    Vertex v = pc.vertexPtr[vertexID];
+    Vertex v = pc.vertexPtr[vertexID + pc.vertexOffset];
 
     output.position = mul(pc.worldDataPtr.proj, mul(pc.worldDataPtr.view, mul(pc.transformPtr[pc.transformIndex], float4(v.position, 1.0))));
     output.color    = v.normal;

@@ -143,7 +143,8 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
         .vertBufAddress = bufferMan->meshBufferAddress,
         .transformBufAddress = bufferMan->transformBufferAddress,
         .worldBufAddress = bufferMan->worldBufferAddress,
-        .transformIndex = info.transformIndex};
+        .transformIndex = info.transformIndex,
+        .vertexOffset = info.vertexOffset};
     cmd.pushConstants(
         ctx->pipelineLayout,
         vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,

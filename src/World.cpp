@@ -48,8 +48,10 @@ void fe_World::prepareDraw(std::vector<fe_Vertex>& vertices,
     drawInfos.push_back(
         {.indexCount = static_cast<uint32_t>(pair.first.indices.size()),
          .indexOffset = static_cast<uint32_t>(indices.size()),
+         .vertexOffset = static_cast<uint32_t>(vertices.size()),
          .transformIndex = static_cast<uint32_t>(drawInfos.size()),
          .material = pair.second});
+
     vertices.insert(vertices.end(), pair.first.vertices.begin(),
                     pair.first.vertices.end());
     indices.insert(indices.end(), pair.first.indices.begin(),
@@ -79,7 +81,6 @@ void fe_World::createShapes() {
   addShape({fe_Cube()}, id, {.shader = "triangle", .texture = ""});
   addShape({fe_Cube()}, glm::translate(id, glm::vec3(2.0f, 2.0f, 2.0f)),
            {.shader = "triangle", .texture = ""});
-  addShape(fe_Icosahedron(), glm::translate(id, glm::vec3(-2.0f, -2.0f, -2.0f)),
-
+  addShape(fe_Icosphere(3), glm::translate(id, glm::vec3(-2.0f, -2.0f, -2.0f)),
            {.shader = "triangle", .texture = ""});
 }

@@ -88,7 +88,7 @@ void fe_BufferManager::createMeshBuffer(std::vector<fe_Vertex> vertices,
   void* data = ctx.device.mapMemory2({
       .memory = meshBufferMemory,
       .offset = 0,
-      .size = verticesSize,
+      .size = verticesSize + indicesSize,
   });
 
   // literally just copy it in because it's eHostVisible and eDeviceLocal

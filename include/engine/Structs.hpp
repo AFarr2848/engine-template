@@ -13,6 +13,7 @@ struct fe_PushConstants {
   uint64_t transformBufAddress;
   uint64_t worldBufAddress;
   uint32_t transformIndex;
+  uint32_t vertexOffset;
 };
 
 struct fe_Material {
@@ -23,6 +24,7 @@ struct fe_Material {
 struct fe_DrawInfo {
   uint32_t indexCount;
   uint32_t indexOffset;
+  uint32_t vertexOffset;
   uint32_t transformIndex;
   fe_Material material;
 };
