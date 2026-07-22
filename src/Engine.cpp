@@ -13,6 +13,7 @@
 #include "engine/World.hpp"
 #include "engine/managers/BufferManager.hpp"
 #include "engine/managers/ShaderManager.hpp"
+#include "engine/managers/TextureManager.hpp"
 #include "vulkan/vulkan.hpp"
 
 fe_Engine::~fe_Engine() = default;
@@ -26,6 +27,7 @@ void fe_Engine::startEngine() {
   tim = std::make_unique<fe_TimingData>(*ctx, *swp);
   shaderMan = std::make_unique<fe_ShaderManager>(*ctx);
   bufferMan = std::make_unique<fe_BufferManager>(*ctx);
+  texMan = std::make_unique<fe_TextureManager>(*ctx, *tim);
   world = std::make_unique<fe_World>(*inputHelper);
 
   win->init();
@@ -34,22 +36,38 @@ void fe_Engine::startEngine() {
   tim->init();
   world->init();
 
-  shaderMan->loadShaderModule("triangle_vert",
-                              "build/shaders/triangle_vert.spv",
-                              vk::ShaderStageFlagBits::eVertex);
-  shaderMan->loadShaderModule("triangle_frag",
-                              "build/shaders/triangle_frag.spv",
-                              vk::ShaderStageFlagBits::eFragment);
+  texMan->loadTextures();
+  texMan->addTextureFromColor(glm::vec3(1.0f, 0.0f, 1.0f), "pink");
+  texMan->addTextureFromColor(glm::vec3(1.0f, 0.0f, 0.0f), "red");
+
+  std::cout << "Loading shader modules..." << std::endl;
+  shaderMan->loadShaderModule(
+      "triangle_vert", "build/shaders/triangle_vert.spv",
+      vk::ShaderStageFlagBits::eVertex, texMan->texSetLayout);
+  shaderMan->loadShaderModule(
+      "triangle_frag", "build/shaders/triangle_frag.spv",
+      vk::ShaderStageFlagBits::eFragment, texMan->texSetLayout);
+  shaderMan->loadShaderModule("normals_vert", "build/shaders/normals_vert.spv",
+                              vk::ShaderStageFlagBits::eVertex,
+                              texMan->texSetLayout);
+  shaderMan->loadShaderModule("normals_frag", "build/shaders/normals_frag.spv",
+                              vk::ShaderStageFlagBits::eFragment,
+                              texMan->texSetLayout);
 
   std::vector<fe_Vertex> vertices = {};
   std::vector<uint32_t> indices = {};
 
+  std::cout << "Loading meshes..." << std::endl;
   world->prepareDraw(vertices, indices, drawInfos);
 
+  std::cout << "Creating buffers..." << std::endl;
   bufferMan->createMeshBuffer(vertices, indices);
   bufferMan->createTransformBuffer(sizeof(glm::mat4) *
                                    world->transforms.size());
   bufferMan->createWorldBuffer();
+
+  std::cout << "Loading textures..." << std::endl;
+  ctx->createPipelineLayout(texMan->texSetLayout);
 }
 
 void fe_Engine::run() {
@@ -81,7 +99,7 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
   vk::CommandBuffer cmd = tim->getCurrentCmdBuffer();
   vk::CommandBufferBeginInfo beginInfo = {};
   cmd.begin(beginInfo);
-  transitionImageLayout(
+  ctx->transitionImageLayout(
       tim->getCurrentCmdBuffer(), swp->swapChainImages[imageIndex],
       vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal, {},
       vk::AccessFlagBits2::eColorAttachmentWrite,
@@ -89,13 +107,13 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
       vk::PipelineStageFlagBits2::eColorAttachmentOutput,
       vk::ImageAspectFlagBits::eColor);
 
-  transitionImageLayout(tim->getCurrentCmdBuffer(), swp->depthImage,
-                        vk::ImageLayout::eUndefined,
-                        vk::ImageLayout::eDepthAttachmentOptimal, {},
-                        vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
-                        vk::PipelineStageFlagBits2::eEarlyFragmentTests,
-                        vk::PipelineStageFlagBits2::eEarlyFragmentTests,
-                        vk::ImageAspectFlagBits::eDepth);
+  ctx->transitionImageLayout(tim->getCurrentCmdBuffer(), swp->depthImage,
+                             vk::ImageLayout::eUndefined,
+                             vk::ImageLayout::eDepthAttachmentOptimal, {},
+                             vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+                             vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+                             vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+                             vk::ImageAspectFlagBits::eDepth);
 
   vk::ClearValue clearColor{};
   clearColor.color =
@@ -128,6 +146,21 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
   };
 
   cmd.beginRendering(renderingInfo);
+
+  // Bind texture set
+  vk::DescriptorSet set = texMan->texDscSet;
+  vk::BindDescriptorSetsInfo bindInfo = {
+      .stageFlags = vk::ShaderStageFlagBits::eFragment,
+      .layout = ctx->pipelineLayout,
+      .firstSet = 0,
+      .descriptorSetCount = 1,
+      .pDescriptorSets = &set,
+      .dynamicOffsetCount = 0,
+      .pDynamicOffsets = nullptr,
+  };
+
+  cmd.bindDescriptorSets2(bindInfo);
+
   for (auto& info : drawInfos) {
     // bind shaders
     cmd.bindShadersEXT(vk::ShaderStageFlagBits::eVertex,
@@ -144,7 +177,10 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
         .transformBufAddress = bufferMan->transformBufferAddress,
         .worldBufAddress = bufferMan->worldBufferAddress,
         .transformIndex = info.transformIndex,
-        .vertexOffset = info.vertexOffset};
+        .vertexOffset = info.vertexOffset,
+        .imageIndex = texMan->getTextureIndex(info.material.texture)
+
+    };
     cmd.pushConstants(
         ctx->pipelineLayout,
         vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
@@ -159,7 +195,7 @@ void fe_Engine::recordCommandBuffer(uint32_t imageIndex) {
   tim->getCurrentCmdBuffer().endRendering();
 
   // transition to present
-  transitionImageLayout(
+  ctx->transitionImageLayout(
       tim->getCurrentCmdBuffer(), swp->swapChainImages[imageIndex],
       vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR,
       vk::AccessFlagBits2::eColorAttachmentWrite,          // srcAccessMask
@@ -276,36 +312,6 @@ void fe_Engine::drawFrame() {
   }
 
   tim->incrementTiming();
-}
-
-void fe_Engine::transitionImageLayout(vk::raii::CommandBuffer& cmd,
-                                      vk::Image image,
-                                      vk::ImageLayout old_layout,
-                                      vk::ImageLayout new_layout,
-                                      vk::AccessFlags2 src_access_mask,
-                                      vk::AccessFlags2 dst_access_mask,
-                                      vk::PipelineStageFlags2 src_stage_mask,
-                                      vk::PipelineStageFlags2 dst_stage_mask,
-                                      vk::ImageAspectFlags image_aspect_flags) {
-  vk::ImageMemoryBarrier2 barrier = {
-      .srcStageMask = src_stage_mask,
-      .srcAccessMask = src_access_mask,
-      .dstStageMask = dst_stage_mask,
-      .dstAccessMask = dst_access_mask,
-      .oldLayout = old_layout,
-      .newLayout = new_layout,
-      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .image = image,
-      .subresourceRange = {.aspectMask = image_aspect_flags,
-                           .baseMipLevel = 0,
-                           .levelCount = 1,
-                           .baseArrayLayer = 0,
-                           .layerCount = 1}};
-  vk::DependencyInfo dependency_info = {.dependencyFlags = {},
-                                        .imageMemoryBarrierCount = 1,
-                                        .pImageMemoryBarriers = &barrier};
-  cmd.pipelineBarrier2(dependency_info);
 }
 
 void fe_Engine::configCommandBuffer() {

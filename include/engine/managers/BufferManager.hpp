@@ -38,17 +38,6 @@ class fe_BufferManager {
  private:
   fe_VulkanContext& ctx;
 
-  void createBuffer(vk::DeviceSize size,
-                    vk::BufferUsageFlags usage,
-                    vk::MemoryPropertyFlags properties,
-                    vk::MemoryAllocateFlagsInfo allocFlagsInfo,
-                    vk::raii::Buffer& buffer,
-                    vk::raii::DeviceMemory& bufferMemory);
-
-  void copyBuffer(vk::raii::Buffer& srcBuffer,
-                  vk::raii::Buffer& dstBuffer,
-                  vk::DeviceSize size);
-
   vk::raii::DeviceMemory meshBufferMemory = nullptr;
   vk::raii::DeviceMemory transformBufferMemory = nullptr;
   vk::raii::DeviceMemory worldBufferMemory = nullptr;

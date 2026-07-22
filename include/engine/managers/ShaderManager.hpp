@@ -13,10 +13,12 @@ class fe_ShaderManager {
    * @param name The name of the new shader module
    * @param filePath The path to the compiled shader
    * @param stage The shader's stage
+   * @param texSetLayout the texture descriptor set layout
    */
   void loadShaderModule(const std::string& name,
                         const std::string& filePath,
-                        vk::ShaderStageFlagBits stage);
+                        vk::ShaderStageFlagBits stage,
+                        vk::raii::DescriptorSetLayout& texSetLayout);
 
   vk::ShaderEXT getShader(const std::string& name);
 

@@ -14,6 +14,7 @@ struct fe_PushConstants {
   uint64_t worldBufAddress;
   uint32_t transformIndex;
   uint32_t vertexOffset;
+  uint32_t imageIndex;
 };
 
 struct fe_Material {
@@ -30,9 +31,11 @@ struct fe_DrawInfo {
 };
 
 struct fe_Texture {
-  vk::Image image;
-  vk::DeviceMemory memory;
-  vk::ImageView view;
+  std::string name;
+  vk::raii::Image image = nullptr;
+  vk::raii::DeviceMemory memory = nullptr;
+  vk::raii::ImageView view = nullptr;
+  vk::raii::Sampler sampler = nullptr;
 };
 
 struct fe_WorldData {

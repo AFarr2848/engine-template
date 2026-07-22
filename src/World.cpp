@@ -78,9 +78,10 @@ fe_WorldData fe_World::getWorldData(fe_FrameContext frameContext) {
 
 void fe_World::createShapes() {
   glm::mat4 id = glm::mat4(1.0f);
-  addShape({fe_Cube()}, id, {.shader = "triangle", .texture = ""});
+
+  addShape({fe_Cube()}, id, {.shader = "triangle", .texture = "rainbow.png"});
   addShape({fe_Cube()}, glm::translate(id, glm::vec3(2.0f, 2.0f, 2.0f)),
-           {.shader = "triangle", .texture = ""});
+           {.shader = "normals", .texture = "red"});
   addShape(fe_Icosphere(3), glm::translate(id, glm::vec3(-2.0f, -2.0f, -2.0f)),
-           {.shader = "triangle", .texture = ""});
+           {.shader = "triangle", .texture = "earth.png"});
 }

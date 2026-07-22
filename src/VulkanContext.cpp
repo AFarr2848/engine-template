@@ -1,6 +1,7 @@
 #include "engine/VulkanContext.hpp"
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <vulkan/vulkan_raii.hpp>
 #include "Config.hpp"
 #include "engine/Structs.hpp"
 #include "engine/Window.hpp"
@@ -8,7 +9,8 @@
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
-void fe_VulkanContext::createPipelineLayout() {
+void fe_VulkanContext::createPipelineLayout(
+    vk::raii::DescriptorSetLayout& texLayout) {
   vk::PushConstantRange pcRange = {
 
       .stageFlags =
@@ -18,10 +20,12 @@ void fe_VulkanContext::createPipelineLayout() {
 
   };
 
+  vk::DescriptorSetLayout layout = texLayout;
+
   vk::PipelineLayoutCreateInfo layoutInfo = {
 
-      .setLayoutCount = 0,
-      .pSetLayouts = nullptr,
+      .setLayoutCount = 1,
+      .pSetLayouts = &layout,
       .pushConstantRangeCount = 1,
       .pPushConstantRanges = &pcRange
 
@@ -161,8 +165,15 @@ void fe_VulkanContext::createLogicalDevice() {
   };
   vk::PhysicalDeviceVulkan12Features vulkan12Features{
       .pNext = &vulkan11Features,
-      .timelineSemaphore = VK_TRUE,
-      .bufferDeviceAddress = VK_TRUE};
+      .shaderSampledImageArrayNonUniformIndexing = vk::True,
+      .descriptorBindingSampledImageUpdateAfterBind = vk::True,
+      .descriptorBindingPartiallyBound = vk::True,
+      .descriptorBindingVariableDescriptorCount = vk::True,
+      .runtimeDescriptorArray = vk::True,
+      .timelineSemaphore = vk::True,
+      .bufferDeviceAddress = vk::True
+
+  };
 
   vk::PhysicalDeviceVulkan13Features vulkan13Features{
       .pNext = &vulkan12Features,
@@ -222,6 +233,8 @@ void fe_VulkanContext::pickPhysicalDevice() {
                               requiredDeviceExtension) == 0;
               });
         });
+
+    // TODO: I think all this is wrong  idk
 
     auto features =
         device.template getFeatures2<vk::PhysicalDeviceFeatures2,
@@ -300,4 +313,91 @@ vk::Format fe_VulkanContext::findSupportedFormat(
     }
   }
   throw std::runtime_error("failed to find supported format");
+}
+
+void fe_VulkanContext::transitionImageLayout(
+    vk::raii::CommandBuffer& cmd,
+    vk::Image image,
+    vk::ImageLayout old_layout,
+    vk::ImageLayout new_layout,
+    vk::AccessFlags2 src_access_mask,
+    vk::AccessFlags2 dst_access_mask,
+    vk::PipelineStageFlags2 src_stage_mask,
+    vk::PipelineStageFlags2 dst_stage_mask,
+    vk::ImageAspectFlags image_aspect_flags) {
+  vk::ImageMemoryBarrier2 barrier = {
+      .srcStageMask = src_stage_mask,
+      .srcAccessMask = src_access_mask,
+      .dstStageMask = dst_stage_mask,
+      .dstAccessMask = dst_access_mask,
+      .oldLayout = old_layout,
+      .newLayout = new_layout,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .image = image,
+      .subresourceRange = {.aspectMask = image_aspect_flags,
+                           .baseMipLevel = 0,
+                           .levelCount = 1,
+                           .baseArrayLayer = 0,
+                           .layerCount = 1}};
+  vk::DependencyInfo dependency_info = {.dependencyFlags = {},
+                                        .imageMemoryBarrierCount = 1,
+                                        .pImageMemoryBarriers = &barrier};
+  cmd.pipelineBarrier2(dependency_info);
+}
+
+void fe_VulkanContext::createBuffer(vk::DeviceSize size,
+                                    vk::BufferUsageFlags usage,
+                                    vk::MemoryPropertyFlags properties,
+                                    vk::MemoryAllocateFlagsInfo allocFlagsInfo,
+                                    vk::raii::Buffer& buffer,
+                                    vk::raii::DeviceMemory& bufferMemory) {
+  vk::BufferCreateInfo bufferInfo{
+      .size = size, .usage = usage, .sharingMode = vk::SharingMode::eExclusive};
+
+  buffer = vk::raii::Buffer(device, bufferInfo);
+  vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
+  vk::MemoryAllocateInfo allocInfo{
+      .pNext = allocFlagsInfo,
+      .allocationSize = memRequirements.size,
+      .memoryTypeIndex =
+          findMemoryType(memRequirements.memoryTypeBits, properties)
+
+  };
+  bufferMemory = vk::raii::DeviceMemory(device, allocInfo);
+  buffer.bindMemory(*bufferMemory, 0);
+}
+
+void fe_VulkanContext::createImage(uint32_t width,
+                                   uint32_t height,
+                                   vk::Format format,
+                                   vk::ImageTiling tiling,
+                                   vk::ImageUsageFlags usage,
+                                   vk::MemoryPropertyFlags properties,
+                                   vk::raii::Image& image,
+                                   vk::raii::DeviceMemory& imageMemory,
+                                   uint32_t layerCount) {
+  vk::ImageCreateInfo imageInfo{.imageType = vk::ImageType::e2D,
+                                .format = format,
+                                .extent = {width, height, 1},
+                                .mipLevels = 1,
+                                .arrayLayers = layerCount,
+                                .samples = vk::SampleCountFlagBits::e1,
+                                .tiling = tiling,
+                                .usage = usage,
+                                .sharingMode = vk::SharingMode::eExclusive
+
+  };
+
+  image = vk::raii::Image(device, imageInfo);
+
+  vk::MemoryRequirements memRequirements = image.getMemoryRequirements();
+  vk::MemoryAllocateInfo allocInfo{
+      .allocationSize = memRequirements.size,
+      .memoryTypeIndex =
+          findMemoryType(memRequirements.memoryTypeBits, properties)};
+  imageMemory = vk::raii::DeviceMemory(device, allocInfo);
+  vk::BindImageMemoryInfo info = {
+      .image = image, .memory = imageMemory, .memoryOffset = 0};
+  device.bindImageMemory2(info);
 }

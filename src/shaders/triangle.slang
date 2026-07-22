@@ -1,7 +1,8 @@
 struct VertexOutput
 {
     float4 position : SV_Position;
-    float3 color    : COLOR;
+    float3 normal;
+    float2 uv       : TEXCOORD0;
 };
 
 struct Vertex {
@@ -28,6 +29,7 @@ struct PushConstants {
     WorldData* worldDataPtr;
     uint transformIndex;
     uint vertexOffset;
+    uint texIndex;
 };
 
 [[vk::push_constant]]
@@ -42,14 +44,17 @@ VertexOutput vertexMain(uint vertexID : SV_VertexID)
     Vertex v = pc.vertexPtr[vertexID + pc.vertexOffset];
 
     output.position = mul(pc.worldDataPtr.proj, mul(pc.worldDataPtr.view, mul(pc.transformPtr[pc.transformIndex], float4(v.position, 1.0))));
-    output.color    = v.normal;
+    output.normal   = v.normal;
+    output.uv = v.uv;
     
     return output;
 }
 
+[vk::binding(0, 0)]
+Sampler2D globalTextures[];
+
 [shader("fragment")]
 float4 fragmentMain(VertexOutput input) : SV_Target
 {
-    float3 mappedColor = input.color * 0.5 + 0.5;
-    return float4(mappedColor, 1.0);
+    return globalTextures[pc.texIndex].Sample(input.uv);
 }

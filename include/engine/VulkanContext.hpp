@@ -17,7 +17,6 @@ class fe_VulkanContext {
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
-    createPipelineLayout();
   };
 
   // TODO: move this
@@ -59,14 +58,48 @@ class fe_VulkanContext {
   void createSurface();
 
   /**
-   * @brief guess
+   * @brief Creates the pipeline layout. Needs to be called seperately and after
+   * the texture set layout has been created.
    */
-  void createPipelineLayout();
+  void createPipelineLayout(vk::raii::DescriptorSetLayout& texLayout);
+  //
+  // some util stuff
+  //
 
-  // TODO: idk why this is even in here
   vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates,
                                  vk::ImageTiling tiling,
                                  vk::FormatFeatureFlags features);
+
+  void transitionImageLayout(vk::raii::CommandBuffer& cmd,
+                             vk::Image image,
+                             vk::ImageLayout old_layout,
+                             vk::ImageLayout new_layout,
+                             vk::AccessFlags2 src_access_mask,
+                             vk::AccessFlags2 dst_access_mask,
+                             vk::PipelineStageFlags2 src_stage_mask,
+                             vk::PipelineStageFlags2 dst_stage_mask,
+                             vk::ImageAspectFlags image_aspect_flags);
+
+  void createBuffer(vk::DeviceSize size,
+                    vk::BufferUsageFlags usage,
+                    vk::MemoryPropertyFlags properties,
+                    vk::MemoryAllocateFlagsInfo allocFlagsInfo,
+                    vk::raii::Buffer& buffer,
+                    vk::raii::DeviceMemory& bufferMemory);
+
+  void copyBuffer(vk::raii::Buffer& srcBuffer,
+                  vk::raii::Buffer& dstBuffer,
+                  vk::DeviceSize size);
+
+  void createImage(uint32_t width,
+                   uint32_t height,
+                   vk::Format format,
+                   vk::ImageTiling tiling,
+                   vk::ImageUsageFlags usage,
+                   vk::MemoryPropertyFlags properties,
+                   vk::raii::Image& image,
+                   vk::raii::DeviceMemory& imageMemory,
+                   uint32_t layerCount);
 
  private:
   fe_Window& win;

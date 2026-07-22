@@ -1,6 +1,5 @@
 
 #include "engine/Swapchain.hpp"
-#include <iostream>
 #include "engine/VulkanContext.hpp"
 #include "engine/Window.hpp"
 #include "vulkan/vulkan.hpp"

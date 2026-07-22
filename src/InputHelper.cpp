@@ -1,7 +1,6 @@
 
 #include "engine/InputHelper.hpp"
 #include <GLFW/glfw3.h>
-#include <iostream>
 
 bool fe_InputHelper::isKeyDown(int key) const {
   if (key >= 0 && key < 512) {
@@ -12,7 +11,7 @@ bool fe_InputHelper::isKeyDown(int key) const {
 
 // TODO: write me
 bool fe_InputHelper::isMouseButtonDown(int button) const {
-
+  return false;
 };
 
 void fe_InputHelper::mouseMoved(GLFWwindow* window, glm::vec2 mousePos) {

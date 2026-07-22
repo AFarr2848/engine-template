@@ -11,6 +11,7 @@ class fe_BufferManager;
 class fe_ShaderManager;
 class fe_World;
 class fe_InputHelper;
+class fe_TextureManager;
 
 class fe_Engine {
  public:
@@ -41,15 +42,6 @@ class fe_Engine {
   void configCommandBuffer();
 
   // TODO: Move me
-  void transitionImageLayout(vk::raii::CommandBuffer& cmd,
-                             vk::Image image,
-                             vk::ImageLayout old_layout,
-                             vk::ImageLayout new_layout,
-                             vk::AccessFlags2 src_access_mask,
-                             vk::AccessFlags2 dst_access_mask,
-                             vk::PipelineStageFlags2 src_stage_mask,
-                             vk::PipelineStageFlags2 dst_stage_mask,
-                             vk::ImageAspectFlags image_aspect_flags);
 
   std::unique_ptr<fe_Window> win;
   std::unique_ptr<fe_VulkanContext> ctx;
@@ -57,6 +49,7 @@ class fe_Engine {
   std::unique_ptr<fe_TimingData> tim;
   std::unique_ptr<fe_ShaderManager> shaderMan;
   std::unique_ptr<fe_BufferManager> bufferMan;
+  std::unique_ptr<fe_TextureManager> texMan;
   std::unique_ptr<fe_World> world;
   std::unique_ptr<fe_InputHelper> inputHelper;
 };

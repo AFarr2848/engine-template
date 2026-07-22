@@ -1,13 +1,16 @@
 #include "engine/managers/ShaderManager.hpp"
 #include <fstream>
+#include <vulkan/vulkan_raii.hpp>
 #include "engine/Structs.hpp"
 #include "engine/Timing.hpp"
 #include "engine/VulkanContext.hpp"
 #include "vulkan/vulkan.hpp"
 
-void fe_ShaderManager::loadShaderModule(const std::string& name,
-                                        const std::string& filePath,
-                                        vk::ShaderStageFlagBits stage) {
+void fe_ShaderManager::loadShaderModule(
+    const std::string& name,
+    const std::string& filePath,
+    vk::ShaderStageFlagBits stage,
+    vk::raii::DescriptorSetLayout& texSetLayout) {
   std::ifstream file(filePath, std::ios::ate | std::ios::binary);
   if (!file.is_open()) {
     throw std::runtime_error("Failed to open shader file: " + filePath);
@@ -28,6 +31,8 @@ void fe_ShaderManager::loadShaderModule(const std::string& name,
 
   };
 
+  vk::DescriptorSetLayout setLayout = texSetLayout;
+
   shaderRegistry.emplace(
       name, ctx.device.createShaderEXT(
                 {.stage = stage,
@@ -40,6 +45,8 @@ void fe_ShaderManager::loadShaderModule(const std::string& name,
                  .pName = (stage == vk::ShaderStageFlagBits::eVertex
                                ? "vertexMain"
                                : "fragmentMain"),
+                 .setLayoutCount = 1,
+                 .pSetLayouts = &setLayout,
                  .pushConstantRangeCount = 1,
                  .pPushConstantRanges = &pcRange}));
 }

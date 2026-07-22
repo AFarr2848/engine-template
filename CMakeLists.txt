@@ -15,6 +15,7 @@ add_executable(FeEngine
   src/Timing.cpp
   src/managers/BufferManager.cpp
   src/managers/ShaderManager.cpp
+  src/managers/TextureManager.cpp
   src/World.cpp
   src/InputHelper.cpp
   src/Platonics.cpp
@@ -41,6 +42,7 @@ target_include_directories(FeEngine PRIVATE
 
 target_include_directories(FeEngine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external
 )
 
 target_precompile_headers(FeEngine PRIVATE
@@ -61,6 +63,7 @@ file(MAKE_DIRECTORY ${SHADER_OUT_DIR})
 
 set(SHADER_SOURCES
     ${SHADER_DIR}/triangle.slang
+    ${SHADER_DIR}/normals.slang
 )
 
 set(SHADER_BINARIES "")

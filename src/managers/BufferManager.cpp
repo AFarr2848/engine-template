@@ -1,7 +1,6 @@
 #include "engine/managers/BufferManager.hpp"
 #include <cstdint>
 #include <glm/ext/matrix_float4x4.hpp>
-#include <iostream>
 #include <vulkan/vulkan.hpp>
 #include "engine/Structs.hpp"
 #include "engine/Timing.hpp"
@@ -9,14 +8,14 @@
 #include "vulkan/vulkan.hpp"
 
 void fe_BufferManager::createWorldBuffer() {
-  createBuffer(sizeof(fe_WorldData),
-               vk::BufferUsageFlagBits::eStorageBuffer |
-                   vk::BufferUsageFlagBits::eShaderDeviceAddress,
-               vk::MemoryPropertyFlagBits::eDeviceLocal |
-                   vk::MemoryPropertyFlagBits::eHostVisible |
-                   vk::MemoryPropertyFlagBits::eHostCoherent,
-               {.flags = vk::MemoryAllocateFlagBits::eDeviceAddress},
-               worldBuffer, worldBufferMemory);
+  ctx.createBuffer(sizeof(fe_WorldData),
+                   vk::BufferUsageFlagBits::eStorageBuffer |
+                       vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                   vk::MemoryPropertyFlagBits::eDeviceLocal |
+                       vk::MemoryPropertyFlagBits::eHostVisible |
+                       vk::MemoryPropertyFlagBits::eHostCoherent,
+                   {.flags = vk::MemoryAllocateFlagBits::eDeviceAddress},
+                   worldBuffer, worldBufferMemory);
   worldBufferAddress = ctx.device.getBufferAddress({.buffer = worldBuffer});
 }
 
@@ -38,14 +37,14 @@ void fe_BufferManager::updateWorldBuffer(fe_WorldData worldData) {
 }
 
 void fe_BufferManager::createTransformBuffer(size_t size) {
-  createBuffer(size,
-               vk::BufferUsageFlagBits::eStorageBuffer |
-                   vk::BufferUsageFlagBits::eShaderDeviceAddress,
-               vk::MemoryPropertyFlagBits::eDeviceLocal |
-                   vk::MemoryPropertyFlagBits::eHostVisible |
-                   vk::MemoryPropertyFlagBits::eHostCoherent,
-               {.flags = vk::MemoryAllocateFlagBits::eDeviceAddress},
-               transformBuffer, transformBufferMemory);
+  ctx.createBuffer(size,
+                   vk::BufferUsageFlagBits::eStorageBuffer |
+                       vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                   vk::MemoryPropertyFlagBits::eDeviceLocal |
+                       vk::MemoryPropertyFlagBits::eHostVisible |
+                       vk::MemoryPropertyFlagBits::eHostCoherent,
+                   {.flags = vk::MemoryAllocateFlagBits::eDeviceAddress},
+                   transformBuffer, transformBufferMemory);
   transformBufferAddress =
       ctx.device.getBufferAddress({.buffer = transformBuffer});
   transformSize = size;
@@ -74,15 +73,15 @@ void fe_BufferManager::createMeshBuffer(std::vector<fe_Vertex> vertices,
   indicesSize = sizeof(indices[0]) * indices.size();
 
   // makea da buffer
-  createBuffer(verticesSize + indicesSize,
-               vk::BufferUsageFlagBits::eShaderDeviceAddress |
-                   vk::BufferUsageFlagBits::eIndexBuffer |
-                   vk::BufferUsageFlagBits::eStorageBuffer,
-               vk::MemoryPropertyFlagBits::eHostVisible |
-                   vk::MemoryPropertyFlagBits::eDeviceLocal |
-                   vk::MemoryPropertyFlagBits::eHostCoherent,
-               {.flags = vk::MemoryAllocateFlagBits::eDeviceAddress},
-               meshBuffer, meshBufferMemory);
+  ctx.createBuffer(verticesSize + indicesSize,
+                   vk::BufferUsageFlagBits::eShaderDeviceAddress |
+                       vk::BufferUsageFlagBits::eIndexBuffer |
+                       vk::BufferUsageFlagBits::eStorageBuffer,
+                   vk::MemoryPropertyFlagBits::eHostVisible |
+                       vk::MemoryPropertyFlagBits::eDeviceLocal |
+                       vk::MemoryPropertyFlagBits::eHostCoherent,
+                   {.flags = vk::MemoryAllocateFlagBits::eDeviceAddress},
+                   meshBuffer, meshBufferMemory);
 
   // map memory so CPU can see
   void* data = ctx.device.mapMemory2({
@@ -98,26 +97,4 @@ void fe_BufferManager::createMeshBuffer(std::vector<fe_Vertex> vertices,
 
   ctx.device.unmapMemory2({.memory = meshBufferMemory});
   meshBufferAddress = ctx.device.getBufferAddress({.buffer = meshBuffer});
-}
-
-void fe_BufferManager::createBuffer(vk::DeviceSize size,
-                                    vk::BufferUsageFlags usage,
-                                    vk::MemoryPropertyFlags properties,
-                                    vk::MemoryAllocateFlagsInfo allocFlagsInfo,
-                                    vk::raii::Buffer& buffer,
-                                    vk::raii::DeviceMemory& bufferMemory) {
-  vk::BufferCreateInfo bufferInfo{
-      .size = size, .usage = usage, .sharingMode = vk::SharingMode::eExclusive};
-
-  buffer = vk::raii::Buffer(ctx.device, bufferInfo);
-  vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
-  vk::MemoryAllocateInfo allocInfo{
-      .pNext = allocFlagsInfo,
-      .allocationSize = memRequirements.size,
-      .memoryTypeIndex =
-          ctx.findMemoryType(memRequirements.memoryTypeBits, properties)
-
-  };
-  bufferMemory = vk::raii::DeviceMemory(ctx.device, allocInfo);
-  buffer.bindMemory(*bufferMemory, 0);
 }
